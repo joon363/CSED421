@@ -66,12 +66,21 @@ Four edubfm_FlushTrain(
 {
     Four 			e;			/* for errors */
     Four 			index;			/* for an index */
-
+    Two bufSize;
 
 	/* Error check whether using not supported functionality by EduBfM */
 	if (RM_IS_ROLLBACK_REQUIRED()) ERR(eNOTSUPPORTED_EDUBFM);
 
-
+    index = edubfm_LookUp(trainId, type);
+    if (index == NIL) return eNOTFOUND_BFM;
+    
+    if (BI_BITS(type, index) & 0x01==1) {
+        bufSize = BI_BUFSIZE(type);
+        e = RDsM_WriteTrain(BI_BUFFER(type, index), trainId, bufSize);
+        if (e != eNOERROR) return e;
+        // reset dirty bit
+        BI_BITS(type, index) &= ~0x01;
+    }
 	
     return( eNOERROR );
 
