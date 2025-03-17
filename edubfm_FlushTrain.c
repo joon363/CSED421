@@ -71,15 +71,17 @@ Four edubfm_FlushTrain(
 	/* Error check whether using not supported functionality by EduBfM */
 	if (RM_IS_ROLLBACK_REQUIRED()) ERR(eNOTSUPPORTED_EDUBFM);
 
+    // Look up for Buffer Element
     index = edubfm_LookUp(trainId, type);
     if (index == NIL) return eNOTFOUND_BFM;
     
-    if (BI_BITS(type, index) & 0x01==1) {
+    // Flush if Dirty
+    if (BI_BITS(type, index) & DIRTY) {
         bufSize = BI_BUFSIZE(type);
         e = RDsM_WriteTrain(BI_BUFFER(type, index), trainId, bufSize);
         if (e != eNOERROR) return e;
         // reset dirty bit
-        BI_BITS(type, index) &= ~0x01;
+        BI_BITS(type, index) &= ~DIRTY;
     }
 	
     return( eNOERROR );

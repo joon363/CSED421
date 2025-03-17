@@ -60,9 +60,12 @@ Four EduBfM_FlushAll(void)
     Two         i;                      /* index */
     Four        type;                   /* buffer type */
 
+    // For All Type of Buffer Pools
     for (type = 0; type < NUM_BUF_TYPES; type++) {
+        // For All Buffers
         for (i = 0; i < BI_NBUFS(type); i++) {
-            if (BI_BITS(type, i) & DIRTY) {
+            if (BI_BITS(type, i) !=ALL_0 ) {
+                // Flush Active Buffers
                 e = edubfm_FlushTrain(&BI_KEY(type, i), type);
                 if (e != eNOERROR) return e;
             }
