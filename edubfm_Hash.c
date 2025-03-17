@@ -136,16 +136,20 @@ Four edubfm_Delete(
     hashValue = BFM_HASH(key, type);
     i = BI_HASHTABLEENTRY(type, hashValue);
     prev = NIL;
+    if (i == NIL) return eNOTFOUND_BFM;
+    if (BI_NEXTHASHENTRY(type, i)==NIL &&
+        EQUALKEY(&BI_KEY(type, i),key)) {  // case 1. single value stored & matched
+        BI_HASHTABLEENTRY(type, hashValue) = NIL;
+    }
+    
     while (i != NIL) {
         // To maintain Linked List
         prev = i;
-        if (EQUALKEY(&BI_KEY(type, i), key)) {
-            // Delete Entry
-            BI_HASHTABLEENTRY(type, hashValue) = NIL;
-            // Maintain Linked List
-            BI_NEXTHASHENTRY(type, prev) = BI_NEXTHASHENTRY(type, i);
-        }
         i = BI_NEXTHASHENTRY(type, i);
+        if (EQUALKEY(&BI_KEY(type, i), key)) {
+            BI_NEXTHASHENTRY(type, prev) = BI_NEXTHASHENTRY(type, i);
+            return eNOERROR;
+        }
     }
 
     ERR( eNOTFOUND_BFM );
