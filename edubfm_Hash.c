@@ -126,7 +126,20 @@ Four edubfm_Delete(
 
     CHECKKEY(key);    /*@ check validity of key */
 
-
+    hashValue = BFM_HASH(key, type);
+    i = BI_HASHTABLEENTRY(type, hashValue);
+    
+    while (i != NIL) {
+        // To maintain Linked List
+        prev = i;
+        if (EQUALKEY(&BI_KEY(type, i), key)) {
+            // Delete Entry
+            BI_HASHTABLEENTRY(type, hashValue) = NIL;
+            // Maintain Linked List
+            BI_NEXTHASHENTRY(type, prev) = BI_NEXTHASHENTRY(type, i);
+        }
+        i = BI_NEXTHASHENTRY(type, i);
+    }
 
     ERR( eNOTFOUND_BFM );
 
@@ -194,8 +207,15 @@ Four edubfm_DeleteAll(void)
 {
     Two 	i;
     Four        tableSize;
+    Two     type;
     
-
+    for (type = 0; type < NUM_BUF_TYPES; type++) {
+        tableSize = HASHTABLESIZE(type);
+        for (i = 0; i < tableSize; i++) {
+            // Delete Entry
+            BI_HASHTABLEENTRY(type,i) = NIL;
+        }
+    }
 
     return(eNOERROR);
 

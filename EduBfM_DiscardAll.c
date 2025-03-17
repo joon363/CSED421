@@ -59,8 +59,17 @@ Four EduBfM_DiscardAll(void)
     Two 	i;			/* index */
     Four 	type;			/* buffer type */
 
+    for (type = 0; type < NUM_BUF_TYPES; type++) {
+        for (i = 0; i < BI_NBUFS(type); i++) {
+            // 각 bufTable의 모든 element들을 초기화함– key: set pageNo to NIL(-1)
+            SET_NILBFMHASHKEY(BI_KEY(type, i));
+            BI_BITS(type, i)=ALL_0;
+        }
+    }
+    // 각hashTable에 저장된 모든 entry (즉, array index) 들을 삭제함
+    e = edubfm_DeleteAll();
 
-
+    if(e!=eNOERROR) return e;
     return(eNOERROR);
 
 }  /* EduBfM_DiscardAll() */
