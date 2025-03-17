@@ -161,7 +161,13 @@ Four edubfm_LookUp(
 
     CHECKKEY(key);    /*@ check validity of key */
 
-
+    hashValue = BFM_HASH(key, type);
+    i = BI_HASHTABLEENTRY(type, hashValue);
+    
+    while (i != NIL) {
+        if (EQUALKEY(&BI_KEY(type, i), key)) return i;
+        i = BI_NEXTHASHENTRY(type, i);
+    }
 
     return(NOTFOUND_IN_HTABLE);
     

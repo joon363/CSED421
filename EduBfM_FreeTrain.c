@@ -67,6 +67,14 @@ Four EduBfM_FreeTrain(
     if (IS_BAD_BUFFERTYPE(type)) ERR(eBADBUFFERTYPE_BFM);	
 
 
+    index=edubfm_LookUp(trainId,type);
+    if(index!=-1){
+        if(BI_FIXED(type, index)>0){
+            BI_FIXED(type, index)--;
+        }
+    }
+
+    
     
     return( eNOERROR );
     
