@@ -91,9 +91,10 @@ Four edubfm_Insert(
     if((index < 0) || (index > BI_NBUFS(type))) return eBADBUFINDEX_BFM;
 
     hashValue = BFM_HASH(key,type);
-    if (BI_HASHTABLEENTRY(type, hashValue) != NIL){
-        BI_NEXTHASHENTRY(type, index) = BI_HASHTABLEENTRY(type, hashValue);
+    i = BI_HASHTABLEENTRY(type, hashValue);
+    if ( i!= NIL){
         BI_HASHTABLEENTRY(type, hashValue) = index;
+        BI_NEXTHASHENTRY(type, index) = i;
     }
     else{
         BI_HASHTABLEENTRY(type, hashValue) = index;
