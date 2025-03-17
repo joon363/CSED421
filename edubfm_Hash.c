@@ -137,8 +137,10 @@ Four edubfm_Delete(
     i = BI_HASHTABLEENTRY(type, hashValue);
     prev = NIL;
     if (i == NIL) return eNOTFOUND_BFM;
+
+    // no linked list
     if (BI_NEXTHASHENTRY(type, i)==NIL &&
-        EQUALKEY(&BI_KEY(type, i),key)) {  // case 1. single value stored & matched
+        EQUALKEY(&BI_KEY(type, i),key)) {
         BI_HASHTABLEENTRY(type, hashValue) = NIL;
     }
     
