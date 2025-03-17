@@ -74,13 +74,46 @@ Four edubfm_AllocTrain(
     Four 	e;			/* for error */
     Four 	victim;			/* return value */
     Four 	i;
+    Two     nBuf;
     
 
 	/* Error check whether using not supported functionality by EduBfM */
 	if(sm_cfgParams.useBulkFlush) ERR(eNOTSUPPORTED_EDUBFM);
 
+    // Second chance buffer replacement algorithm을 사용
+    nBuf = BI_NBUFS(type);
+    victim = BI_NEXTVICTIM(type);
+    for (i = 0; i < nBuf * 2; i++) {
+        // 대응하는 fixed 변수값이 0인 buffer element들을 순차적으로 방문함
+        if (BI_FIXED(type, victim) == 0){
+            // 각buffer element 방문시 REFER bit를 검사하여 
+            // 동일한 buffer element를 2회째 방문한경우(REFER bit == 0), 
+            // 해당 buffer element를 할당 대상으로 선정하고, 
+            // 아닌경우(REFER bit == 1), REFER bit를 0으로 설정함
+            if (BI_BITS(type, victim) & REFER) {
+                BI_BITS(type, victim) ^= REFER;
+            }
+            else {
+                BI_NEXTVICTIM(type) = (victim + 1) % BI_NBUFS(type);
+                break;
+            }
+        }
+        victim = ( victim + 1 ) % nBuf;
+    }
 
-    
-    return( victim );
-    
+    if (i == BI_NBUFS(type) * 2) ERR(eNOUNFIXEDBUF_BFM);
+
+    // 선정된 buffer element와 관련된 데이터 구조를 초기화함
+    if (!IS_NILBFMHASHKEY(BI_KEY(type, victim))) {
+        // 선정된 buffer element에 저장되어 있던 page/train이 수정된 경우, 기존 buffer element의 내용을 disk로 flush함
+        if (BI_BITS(type, victim) & DIRTY) {
+            e = edubfm_FlushTrain(&BI_KEY(type, victim), type);
+            if (e < 0) ERR(e);
+        }
+
+        // 선정된 buffer element의 array index (hashTable entry) 를 hashTable에서 삭제함
+        e = edubfm_Delete(&BI_KEY(type, victim), type);
+        if (e < 0) ERR(e);
+    }
+     return victim;
 }  /* edubfm_AllocTrain */

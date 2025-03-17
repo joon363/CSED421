@@ -88,10 +88,16 @@ Four edubfm_Insert(
 
     CHECKKEY(key);    /*@ check validity of key */
 
-    if( (index < 0) || (index > BI_NBUFS(type)) )
-        ERR( eBADBUFINDEX_BFM );
+    if((index < 0) || (index > BI_NBUFS(type))) return eBADBUFINDEX_BFM;
 
-   
+    hashValue = BFM_HASH(key,type);
+    if (BI_HASHTABLEENTRY(type, hashValue) != NIL){
+        BI_NEXTHASHENTRY(type, index) = BI_HASHTABLEENTRY(type, hashValue);
+        BI_HASHTABLEENTRY(type, hashValue) = index;
+    }
+    else{
+        BI_HASHTABLEENTRY(type, hashValue) = index;
+    }
 
     return( eNOERROR );
 
@@ -128,7 +134,7 @@ Four edubfm_Delete(
 
     hashValue = BFM_HASH(key, type);
     i = BI_HASHTABLEENTRY(type, hashValue);
-    
+    prev = NIL;
     while (i != NIL) {
         // To maintain Linked List
         prev = i;
