@@ -70,12 +70,14 @@ Four edubfm_ReadTrain(
     Four    type )		/* IN buffer type */
 {
     Four e;			/* for error */
-
+    Two bufSize;
 
 	/* Error check whether using not supported functionality by EduBfM */
 	if (RM_IS_ROLLBACK_REQUIRED()) ERR(eNOTSUPPORTED_EDUBFM);
 
-
+    bufSize = BI_BUFSIZE(type);
+    e = RDsM_ReadTrain(trainId,aTrain,bufSize);
+    if (e != eNOERROR) return e;
 
     return( eNOERROR );
 
