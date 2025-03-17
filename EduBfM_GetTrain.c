@@ -84,10 +84,10 @@ Four EduBfM_GetTrain(
     if(IS_BAD_BUFFERTYPE(type)) ERR(eBADBUFFERTYPE_BFM);	
 
     // Fix 할 page/train이 bufferPool에 존재하지 않는 경우,
-    if(edubfm_LookUp(trainId,type)==NIL){
+    index = edubfm_LookUp(trainId,type);
+    if(index==NIL){
         // bufferPool에서 page/train을 저장할 buffer element 한 개를 할당 받음
         index=edubfm_AllocTrain(type);
-        if (index<0) return eBADBUFINDEX_BFM;
 
         //Page/train을 disk로부터 읽어와서 할당 받은 buffer element에 저장함
         e= edubfm_ReadTrain(trainId, BI_BUFFER(type, index),type);
@@ -100,12 +100,12 @@ Four EduBfM_GetTrain(
         BI_FIXED(type, index)=1; 
 
         //할당받은buffer element의 array index를 hashTable에 삽입함– 
-        e = edubfm_Insert(trainId, index, type);    
+        e = edubfm_Insert(&BI_KEY(type, index), index, type);    
         if (e != eNOERROR) return e;
     }
     else{
         //해당page/train이 저장된 buffer element에 대응하는 bufTable element를 갱신함
-        BI_FIXED(type, index)++;
+        BI_FIXED(type, index)=BI_FIXED(type, index)+1;
         BI_BITS(type, index) = BI_BITS(type, index) | REFER;
     }
 
