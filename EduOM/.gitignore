@@ -1,0 +1,6 @@
+
+*.o
+!cosmos.o
+EduBfM_Test
+result.txt
+odysseus_error.log
