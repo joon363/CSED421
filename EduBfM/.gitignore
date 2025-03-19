@@ -1,6 +1,6 @@
 
 *.o
+!cosmos.o
 EduBfM_Test
 result.txt
-*.vol
 odysseus_error.log
