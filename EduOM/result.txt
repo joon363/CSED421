@@ -1,0 +1,166 @@
+Loading EduOM_Test() complete...
+****************************** TEST#1, EduOM_CreateObject and EduOM_DestroyObject ******************************
+*Test 1_1 : Test for EduOM_CreateObject() when a near object is NULL
+->Insert a new object into a empty page
+
+The object ( 21942, 0 )  is inserted into the page
+
+
+*Test 1_2 : Test for EduOM_CreateObject() when a near object is not NULL
+->Insert new objects into the page until the page is full
+
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+
+---------------------------------- Result ----------------------------------
+
+
+*Test 1_3 : Test for EduOM_CreateObeject() until a new page is needed
+->Insert new objects into the page until the 2nd object of 3rd page is created
+
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 )  is inserted into the page
+The object ( 21942, 0 ) 
