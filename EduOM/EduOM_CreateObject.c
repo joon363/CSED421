@@ -104,9 +104,28 @@ Four EduOM_CreateObject(
 	/* Error check whether using not supported functionality by EduOM */
 	if(ALIGNED_LENGTH(length) > LRGOBJ_THRESHOLD) ERR(eNOTSUPPORTED_EDUOM);
     
-
+    e = eNOERROR;
     
-    return(eNOERROR);
+    /*삽입할object의 header를 초기화함
+    – properties := 0x0
+    – length := 0
+    – 파라미터로주어진objHdr가NULL이아닌경우, tag := objHdr에 저장된 tag 값
+    – 파라미터로주어진objHdr가NULL인경우, » tag := 0*/
+    objectHdr.properties=0x0;
+    objectHdr.length=0;
+    objectHdr.tag=objHdr==NULL?0:objHdr->tag;
+
+    /*eduom_CreateObject()를 호출하여 page에 object를 삽입하고, 
+    삽입된 object의 ID를 반환함 */
+    e = eduom_CreateObject(
+        catObjForFile,	/* IN file in which object is to be placed */
+        nearObj,	    /* IN create the new object near this object */
+        &objectHdr,	    /* IN from which tag & properties are set */
+        length,		    /* IN amount of data */
+        data,		    /* IN the initial data for the object */
+        oid             /* OUT the object's ObjectID */
+    );
+    return(e);
 }
 
 /*@================================
