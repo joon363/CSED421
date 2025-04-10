@@ -114,7 +114,7 @@ Four EduOM_NextObject(
       pageNo = catEntry->firstPage;
       MAKE_PAGEID(pid, volNo, pageNo);
       e = BfM_GetTrain(&pid, &apage, PAGE_BUF);
-      if (e < eNOERROR) ERRB1(e, &pFid, PAGE_BUF);
+      if (e < eNOERROR) ERR(e);
 
       /* Now Get First Object of Slot array of the page 
         * Since Slot has negative Index, use [-i] here.
@@ -153,7 +153,7 @@ Four EduOM_NextObject(
       pageNo = curOID->pageNo;
       MAKE_PAGEID(pid, volNo, pageNo);
       e = BfM_GetTrain(&pid, &apage, PAGE_BUF);
-      if (e < eNOERROR) ERRB1(e, &pFid, PAGE_BUF);
+      if (e < eNOERROR) ERR(e);
       
       // 탐색한 object가 page의 마지막 object인 경우,
       if (curOID->slotNo == apage->header.nSlots - 1) {
@@ -177,7 +177,7 @@ Four EduOM_NextObject(
           pageNo = apage->header.nextPage;
           MAKE_PAGEID(pid, volNo,pageNo);
           e = BfM_GetTrain(&pid, &apage, PAGE_BUF);
-          if (e < eNOERROR) ERRB1(e, &pFid, PAGE_BUF);
+          if (e < eNOERROR) ERR(e);
 
           //첫 번째 object의 ID를 반환함
           for (i = 0; i < apage->header.nSlots; i++) {

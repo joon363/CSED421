@@ -106,17 +106,17 @@ Four EduOM_CreateObject(
     
     e = eNOERROR;
     
-    /*삽입할object의 header를 초기화함
-    – properties := 0x0
-    – length := 0
-    – 파라미터로주어진objHdr가NULL이아닌경우, tag := objHdr에 저장된 tag 값
-    – 파라미터로주어진objHdr가NULL인경우, » tag := 0*/
+    // 삽입할object의 header를 초기화함
+    // – properties := 0x0
+    // – length := 0
+    // – 파라미터로주어진objHdr가NULL이아닌경우, tag := objHdr에 저장된 tag 값
+    // – 파라미터로주어진objHdr가NULL인경우, » tag := 0
     objectHdr.properties=0x0;
     objectHdr.length=0;
     objectHdr.tag=objHdr==NULL?0:objHdr->tag;
 
-    /*eduom_CreateObject()를 호출하여 page에 object를 삽입하고, 
-    삽입된 object의 ID를 반환함 */
+    // eduom_CreateObject()를 호출하여 page에 object를 삽입하고, 
+    // 삽입된 object의 ID를 반환함
     e = eduom_CreateObject(
         catObjForFile,	/* IN file in which object is to be placed */
         nearObj,	    /* IN create the new object near this object */
@@ -207,21 +207,20 @@ Four eduom_CreateObject(
     e = RDsM_PageIdToExtNo(&pFid, &firstExt);
     if (e < eNOERROR) ERR(e);
 
-    /*
-    • Object 삽입을 위해 필요한 자유 공간의 크기를 계산함
-        – sizeof(ObjectHdr) + align 된 object 데이터 영역의 크기 + sizeof(SlottedPageSlot)
-    */
+    // • Object 삽입을 위해 필요한 자유 공간의 크기를 계산함
+    //     – sizeof(ObjectHdr) + align 된 object 데이터 영역의 크기 + sizeof(SlottedPageSlot)
+    
     alignedLen = ALIGNED_LENGTH(length);
     neededSpace = sizeof(ObjectHdr) + alignedLen + sizeof(SlottedPageSlot);
 
-    //– 파라미터로 주어진 nearObj가 NULL이 아닌 경우,
+    // – 파라미터로 주어진 nearObj가 NULL이 아닌 경우,
     if(nearObj!=NULL){
         // nearObj 페이지 획득
         volNo = nearObj->volNo;
         pageNo = nearObj->pageNo;
         MAKE_PAGEID(nearPid, volNo,pageNo);
         e = BfM_GetTrain(&nearPid, &apage, PAGE_BUF);
-        if (e < eNOERROR) ERRB1(e, &pid, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
 
         // » nearObj가 저장된 page에 여유 공간이 있는 경우,
         if (SP_FREE(apage) >= neededSpace){
@@ -232,12 +231,13 @@ Four eduom_CreateObject(
             if (e < eNOERROR) ERR(e);
             
             // 필요시 선정된 page를 compact 함
-            // Cfree: contiguous free area -> compact 기준
+            // CFREE: contiguous free area -> compact의 기준으로 사용
             if (SP_CFREE(apage) < neededSpace) {
                 e = EduOM_CompactPage(apage, nearObj->slotNo);
                 if(e < eNOERROR) ERR(e);
             }
         }
+
         // » nearObj가 저장된 page에 여유 공간이 없는 경우,
         else {
             // nearObj 페이지 해제
@@ -307,6 +307,7 @@ Four eduom_CreateObject(
                 if(e < eNOERROR) ERR(e);
             }
         }       
+
        //Object 삽입을 위해 필요한 자유 공간의 크기에 알맞은 available space list가 존재하지 않고, 
        else {
             //file의 마지막 page에 여유 공간이 있는 경우,
@@ -325,6 +326,7 @@ Four eduom_CreateObject(
                     if(e < eNOERROR) ERR(e);
                 }   
             }
+
             //file의 마지막 page에 여유 공간이 없는 경우,
             else {
                 // 마지막 페이지 해제
@@ -363,12 +365,11 @@ Four eduom_CreateObject(
     newSlot->offset = apage->header.free;
 
     // – Object의 header를 갱신함
-    //         » length := 데이터의 길이
+    //    » length := 데이터의 길이
     obj = &(apage->data[newSlot->offset]);
     obj->header.properties = objHdr->properties;
     obj->header.tag = objHdr->tag;
     obj->header.length = length;
-    // 슬롯에 값을 입력한다.
     e = om_GetUnique(&pid, &(newSlot->unique));
     if (e < eNOERROR) ERR(e);
     MAKE_OBJECTID(*oid, pid.volNo, pid.pageNo, i, newSlot->unique);

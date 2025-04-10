@@ -117,7 +117,7 @@ Four EduOM_PrevObject(
         pageNo = catEntry->lastPage;
         MAKE_PAGEID(pid, volNo, pageNo);
         e = BfM_GetTrain(&pid, &apage, PAGE_BUF);
-        if (e < eNOERROR) ERRB1(e, &pFid, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
 
         // 마지막 object
         /* OUT the previous object of a current object */
@@ -176,7 +176,7 @@ Four EduOM_PrevObject(
                 pageNo = apage->header.prevPage;
                 MAKE_PAGEID(pid, volNo, pageNo);
                 e = BfM_GetTrain(&pid, &apage, PAGE_BUF);
-                if (e < eNOERROR) ERRB1(e, &pFid, PAGE_BUF);
+                if (e < eNOERROR) ERR(e);
                 
                 /* OUT the next Object of a current Object */
                 i = apage->header.nSlots - 1;
