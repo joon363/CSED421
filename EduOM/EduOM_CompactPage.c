@@ -84,10 +84,44 @@ Four EduOM_CompactPage(
     Object *obj;		/* pointer to the object in the data area */
     Two    apageDataOffset;	/* where the next object is to be moved */
     Four   len;			/* length of object + length of ObjectHdr */
+    Four   alignedLen=0;			/* ailgned length of ObjectHdr */
     Two    lastSlot;		/* last non empty slot */
     Two    i;			/* index variable */
 
+    // Page의 데이터 영역의 모든 자유공간이 연속된 하나의 contiguous free area를 형성하도록 object들의 offset를 조정함
+    // save given page to temporary page
+    tpage = *apage;
     
+    // • 파라미터로 주어진 slotNo가 NIL (-1) 이 아닌 경우,
+    //      – slotNo에 대응하는 object를 제외한 page의 모든 object들을 데이터 영역의 가장 앞부분부터 연속되게 저장함
+    //         » Object 저장 순서: 대응하는 slot 번호 순
+    //      – slotNo에 대응하는 object를 데이터 영역 상에서의 마지막 object로 저장함
+    // • 파라미터로 주어진 slotNo가 NIL (-1) 인 경우,
+    //      – Page의 모든 object들을 데이터 영역의 가장 앞부분부터 연속되게 저장함
+    //         » Object 저장 순서: 대응하는 slot 번호 순
+    apageDataOffset=0;
+    for (i = 0; i < tpage.header.nSlots; i++) {
+        if (tpage.slot[-i].offset == EMPTYSLOT || (slotNo!=NIL && slotNo == i)) continue;
+        obj = &(tpage.data[tpage.slot[-i].offset]);
+        alignedLen= ALIGNED_LENGTH(obj->header.length);
+        len = alignedLen + sizeof(ObjectHdr);
+        memcpy((apage->data)+apageDataOffset, obj, len);
+        apage->slot[-i].offset = apageDataOffset;
+        apageDataOffset += len;
+    }
+
+    if (slotNo != NIL) {
+        obj = &(tpage.data[tpage.slot[-slotNo].offset]);
+        alignedLen= ALIGNED_LENGTH(obj->header.length);
+        len = alignedLen + sizeof(ObjectHdr);
+        memcpy((apage->data)+apageDataOffset, obj, len);
+        apage->slot[-slotNo].offset = apageDataOffset;
+        apageDataOffset += len;
+    }
+    
+    // • Page header를 갱신함
+    apage->header.free = apageDataOffset;
+    apage->header.unused = 0;
 
     return(eNOERROR);
     
