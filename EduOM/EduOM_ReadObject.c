@@ -97,8 +97,6 @@ Four EduOM_ReadObject(
     SlottedPage	*apage;		/* pointer to the buffer of the page  */
     Object	*obj;		/* pointer to the object in the slotted page */
     Four	offset;		/* offset of the object in the page */
-    Four    objectHeaderLength;
-    Four    copyLength;
 
     
     
@@ -113,21 +111,21 @@ Four EduOM_ReadObject(
     /* Object의 데이터 전체 또는 일부를 읽고, 읽은 데이터에 대한 포인터를 반환함
      * 1. 파라미터로 주어진 oid를 이용하여 object에 접근함
      */
+    // 페이지 접근
     MAKE_PAGEID(pid, oid->volNo, oid->pageNo);
     e = BfM_GetTrain(&pid, &apage, PAGE_BUF);
     if (e < eNOERROR) ERR(e);
-    if (!IS_VALID_OBJECTID(oid, apage)) ERRB1(eBADOBJECTID_OM, &pid, PAGE_BUF);
-    offset = apage->slot[-(oid)->slotNo].offset;
+    // 오브젝트 접근
+    offset = apage->slot[-((oid)->slotNo)].offset;
     obj = &apage->data[offset];
-
 
     /* 2. 파라미터로 주어진 start 및 length를 고려하여 접근한 object의 데이터를 읽음
      *   - length가 REMAINDER인 경우, 데이터를 끝까지 읽음
      *   - Object의 데이터 영역 상에서 start에 대응하는 offset에서 부터 length 만큼의 데이터를 읽음
      * 3. 해당데이터에대한포인터를반환함
      */
-    copyLength = length==REMAINDER? obj->header.length-start: length;
-    memcpy(buf, &(obj->data[start]), copyLength);
+    length = (length==REMAINDER)? obj->header.length-start: length;
+    memcpy(buf, &(obj->data[start]), length);
 
     e = BfM_FreeTrain(&pid, PAGE_BUF);
     if (e < eNOERROR) ERR(e);
