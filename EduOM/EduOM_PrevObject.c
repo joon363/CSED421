@@ -150,9 +150,10 @@ Four EduOM_PrevObject(
         pageNo = curOID->pageNo;
         MAKE_PAGEID(pid, volNo, pageNo);
         e = BfM_GetTrain(&pid, &apage, PAGE_BUF);
-        if (e < eNOERROR) ERRB1(e, &pFid, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
 
         // Slot array 상에서, 탐색한 object의 이전 object의 ID를 반환함
+        
         // 탐색한 object가 page의 첫 번째 object인 경우
         if (curOID->slotNo==0) {
             // file의 첫번째 page인 경우
@@ -200,14 +201,14 @@ Four EduOM_PrevObject(
         else {
             i = curOID->slotNo - 1;
             /* OUT the next Object of a current Object */
-            volNo = apage->header.pid.volNo;
-            pageNo = apage->header.pid.pageNo;
+            volNo = pid.volNo;
+            pageNo = pid.pageNo;
             MAKE_OBJECTID(*prevOID, volNo, pageNo, i, apage->slot[-i].unique);
     
             /* OUT the object header of next object */
             offset = apage->slot[-i].offset;
             obj = &(apage->data[offset]);
-            objHdr = &obj->header; 
+            objHdr = &(obj->header); 
             
             e = BfM_FreeTrain(&pFid, PAGE_BUF);
             if (e < eNOERROR) ERR(e);
