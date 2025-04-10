@@ -121,15 +121,15 @@ Four EduOM_PrevObject(
 
         // 마지막 object
         /* OUT the previous object of a current object */
-        volNo = apage->header.pid.volNo;
-        pageNo = apage->header.pid.pageNo;
+        i = apage->header.nSlots - 1;
+        volNo = pid.volNo;
+        pageNo = pid.pageNo;
         MAKE_OBJECTID(*prevOID, volNo, pageNo, i, apage->slot[-i].unique);
 
         /* OUT the object header of previous object */
-        i = apage->header.nSlots - 1;
         offset = apage->slot[-i].offset;
         obj = &(apage->data[offset]);
-        objHdr = &obj->header; 
+        objHdr = &(obj->header); 
         
         e = BfM_FreeTrain(&pFid, PAGE_BUF);
         if (e < eNOERROR) ERR(e);
@@ -152,14 +152,9 @@ Four EduOM_PrevObject(
         e = BfM_GetTrain(&pid, &apage, PAGE_BUF);
         if (e < eNOERROR) ERRB1(e, &pFid, PAGE_BUF);
 
-        // index of first object
-        for (firstObjIdx = 0; firstObjIdx < apage->header.nSlots; firstObjIdx++) {
-            if (apage->slot[-firstObjIdx].offset != EMPTYSLOT) break;
-        }
-
         // Slot array 상에서, 탐색한 object의 이전 object의 ID를 반환함
         // 탐색한 object가 page의 첫 번째 object인 경우
-        if (curOID->slotNo==firstObjIdx) {
+        if (curOID->slotNo==0) {
             // file의 첫번째 page인 경우
             if (catEntry->firstPage == apage->header.pid.pageNo) {
                 e = BfM_FreeTrain(&pFid, PAGE_BUF);
@@ -183,12 +178,12 @@ Four EduOM_PrevObject(
                 if (e < eNOERROR) ERRB1(e, &pFid, PAGE_BUF);
                 
                 /* OUT the next Object of a current Object */
+                i = apage->header.nSlots - 1;
                 volNo = apage->header.pid.volNo;
                 pageNo = apage->header.pid.pageNo;
                 MAKE_OBJECTID(*prevOID, volNo, pageNo, i, apage->slot[-i].unique);
         
                 /* OUT the object header of next object */
-                i = apage->header.nSlots - 1;
                 offset = apage->slot[-i].offset;
                 obj = &(apage->data[offset]);
                 objHdr = &obj->header; 
@@ -203,26 +198,23 @@ Four EduOM_PrevObject(
         }
         // 탐색한 object가 page의 첫번째 object가 아닌 경우,
         else {
-            for (i = curOID->slotNo - 1; i >= 0; i--) {
-                if (apage->slot[-i].offset != EMPTYSLOT) {
-                    /* OUT the next Object of a current Object */
-                    volNo = apage->header.pid.volNo;
-                    pageNo = apage->header.pid.pageNo;
-                    MAKE_OBJECTID(*prevOID, volNo, pageNo, i, apage->slot[i].unique);
+            i = curOID->slotNo - 1;
+            /* OUT the next Object of a current Object */
+            volNo = apage->header.pid.volNo;
+            pageNo = apage->header.pid.pageNo;
+            MAKE_OBJECTID(*prevOID, volNo, pageNo, i, apage->slot[-i].unique);
+    
+            /* OUT the object header of next object */
+            offset = apage->slot[-i].offset;
+            obj = &(apage->data[offset]);
+            objHdr = &obj->header; 
             
-                    /* OUT the object header of next object */
-                    offset = apage->slot[-i].offset;
-                    obj = &(apage->data[offset]);
-                    objHdr = &obj->header; 
-                    
-                    e = BfM_FreeTrain(&pFid, PAGE_BUF);
-                    if (e < eNOERROR) ERR(e);
-                    e = BfM_FreeTrain(&pid, PAGE_BUF);
-                    if (e < eNOERROR) ERR(e);
+            e = BfM_FreeTrain(&pFid, PAGE_BUF);
+            if (e < eNOERROR) ERR(e);
+            e = BfM_FreeTrain(&pid, PAGE_BUF);
+            if (e < eNOERROR) ERR(e);
 
-                    return(eNOERROR);
-                }
-            }
+            return(eNOERROR);
         }
     }
 
