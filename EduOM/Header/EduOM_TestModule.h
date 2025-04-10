@@ -41,6 +41,9 @@
 #define SET_DUMP_PAGE(oid)  (dumpPage.volNo = oid.volNo, dumpPage.pageNo = oid.pageNo)
 
 
+DeallocListElem dlHead;
+extern Pool dlPool;
+
 
 /*
  * Type Definition about transaction

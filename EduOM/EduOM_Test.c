@@ -38,9 +38,6 @@
 #include "EduOM_TestModule.h"
 
 
-DeallocListElem dlHead;
-extern Pool dlPool;
-
 Four eduom_DumpPage(SlottedPage *);
 Four eduom_DumpOnePage(PageID *);
 Four eduom_DumpAllPage(PageID *);
