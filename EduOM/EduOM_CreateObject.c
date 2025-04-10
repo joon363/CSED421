@@ -194,45 +194,7 @@ Four eduom_CreateObject(
     /* Error check whether using not supported functionality by EduOM */
     if(ALIGNED_LENGTH(length) > LRGOBJ_THRESHOLD) ERR(eNOTSUPPORTED_EDUOM);
     
-    /*
-    File을 구성하는 page들 중 파라미터로 지정한 object와 같은 (또는 인접한) page에 새로운 object를 삽입하고, 삽입된 object의 ID를 반환함
-    • Object 삽입을 위해 필요한 자유 공간의 크기를 계산함
-        – sizeof(ObjectHdr) + align 된 object 데이터 영역의 크기 + sizeof(SlottedPageSlot)
-    • Object를 삽입할 page를 선정함
-        – 파라미터로 주어진 nearObj가 NULL이 아닌 경우,
-            » nearObj가 저장된 page에 여유 공간이 있는 경우,
-             • 해당 page를 object를 삽입할 page로 선정함
-             • 선정된 page를 현재 available space list에서 삭제함
-             • 필요시 선정된 page를 compact 함
-            » nearObj가 저장된 page에 여유 공간이 없는 경우,
-             • 새로운 page를 할당받아 object를 삽입할 page로 선정함
-             • 선정된 page의 header를 초기화함
-             • 선정된 page를 file 구성 page들로 이루어진 list에서 nearObj가 저장된 page의 다음 page로 삽입함
-        – 파라미터로 주어진 nearObj가 NULL인 경우,
-            » Object 삽입을 위해 필요한 자유 공간의 크기에 알맞은 available space list가 존재하는 경우,
-             • 해당 available space list의 첫 번째 page를 object를 삽입할 page로 선정함
-             • 선정된 page를 현재 available space list에서 삭제함
-             • 필요시 선정된 page를 compact 함
-            » Object 삽입을 위해 필요한 자유 공간의 크기에 알맞은 available space list가 존재하지 않고, file의 마지막 page에 여유 공간이 있는 경우,
-             • File의 마지막 page를 object를 삽입할 page로 선정함
-             • 필요시 선정된 page를 compact 함
-            » Object 삽입을 위해 필요한 자유 공간의 크기에 알맞은 available space list가 존재하지 않고, file의 마지막 page에 여유 공간이 없는 경우,
-             • 새로운 page를 할당받아 object를 삽입할 page로 선정함
-             • 선정된 page의 header를 초기화함
-             • 선정된 page를 file의 구성 page들로 이루어진 list에서 마지막 page로 삽입함
-
-    • 선정된 page에 object를 삽입함
-        – Object의 header를 갱신함
-        » length := 데이터의 길이
-        – 선정한 page의 contiguous free area에 object를 복사함
-        – Slot array의 빈 slot 또는 새로운 slot 한 개를 할당 받아 복사한 object의 식별을 위한 정보를 저장함
-        – Page의 header를 갱신함
-        » Object 삽입으로 인해 사용되는 자유 공간의 크기
-         = sizeof(ObjectHdr) + align 된 object 데이터 영역의 크기 + 새로운 slot을 할당 받은 경우의 sizeof(SlottedPageSlot)
-        – Page를 알맞은 available space list에 삽입함
-
-    • 삽입된 object의 ID를 반환함
-    */
+    // File을 구성하는 page들 중 파라미터로 지정한 object와 같은 (또는 인접한) page에 새로운 object를 삽입하고, 삽입된 object의 ID를 반환함
 
     // Get sm_CatOverlayForData from File
     volNo = catObjForFile->volNo;
@@ -249,7 +211,8 @@ Four eduom_CreateObject(
     • Object 삽입을 위해 필요한 자유 공간의 크기를 계산함
         – sizeof(ObjectHdr) + align 된 object 데이터 영역의 크기 + sizeof(SlottedPageSlot)
     */
-    neededSpace = sizeof(ObjectHdr) + ALIGNED_LENGTH(length) + sizeof(SlottedPageSlot);
+    alignedLen = ALIGNED_LENGTH(length);
+    neededSpace = sizeof(ObjectHdr) + alignedLen + sizeof(SlottedPageSlot);
 
     //– 파라미터로 주어진 nearObj가 NULL이 아닌 경우,
     if(nearObj!=NULL){
@@ -387,26 +350,6 @@ Four eduom_CreateObject(
             }
         }
     }
-    /*• 선정된 page에 object를 삽입함
-        – Object의 header를 갱신함
-            » length := 데이터의 길이
-        – 선정한 page의 contiguous free area에 object를 복사함
-        – Slot array의 빈 slot 또는 새로운 slot 한 개를 할당 받아 복사한 object의 식별을 위한 정보를 저장함
-        – Page의 header를 갱신함
-            » Object 삽입으로 인해 사용되는 자유 공간의 크기
-             = sizeof(ObjectHdr) + align 된 object 데이터 영역의 크기 + 새로운 slot을 할당 받은 경우의 sizeof(SlottedPageSlot)
-        – Page를 알맞은 available space list에 삽입함
-         */
-    // 현재 선정된 page = apage
-
-    // – Object의 header를 갱신함
-    //         » length := 데이터의 길이
-    obj->header.properties = objHdr->properties;
-    obj->header.tag = objHdr->tag;
-    obj->header.length = length;
-
-    // 선정한 page의 contiguous free area에 object를 복사함
-    memcpy(apage->data[apage->header.free], data, length);
 
     // Slot array의 빈 slot 또는 새로운 slot 한 개를 할당 받아 복사한 object의 식별을 위한 정보를 저장함
     i = 0;
@@ -418,14 +361,25 @@ Four eduom_CreateObject(
     }
     SlottedPageSlot* newSlot = &(apage->slot[-i]);
     newSlot->offset = apage->header.free;
+
+    // – Object의 header를 갱신함
+    //         » length := 데이터의 길이
+    obj = &(apage->data[newSlot->offset]);
+    obj->header.properties = objHdr->properties;
+    obj->header.tag = objHdr->tag;
+    obj->header.length = length;
+    // 슬롯에 값을 입력한다.
     e = om_GetUnique(&pid, &(newSlot->unique));
     if (e < eNOERROR) ERR(e);
     MAKE_OBJECTID(*oid, pid.volNo, pid.pageNo, i, newSlot->unique);
 
+    // 선정한 page의 contiguous free area에 object를 복사함
+    memcpy(obj->data, data, length);
+
     // – Page의 header를 갱신함
     // » Object 삽입으로 인해 사용되는 자유 공간의 크기
     //   = sizeof(ObjectHdr) + align 된 object 데이터 영역의 크기 + 새로운 slot을 할당 받은 경우의 sizeof(SlottedPageSlot)
-    apage->header.free += sizeof(ObjectHdr) + ALIGNED_LENGTH(length);
+    apage->header.free += sizeof(ObjectHdr) + alignedLen;
     
     
     // – Page를 알맞은 available space list에 삽입함
@@ -437,10 +391,11 @@ Four eduom_CreateObject(
     e = BfM_SetDirty(&pFid, PAGE_BUF);
     if (e < eNOERROR) ERR(e);
     
-    e = BfM_FreeTrain(&pFid, PAGE_BUF);
-        if (e < eNOERROR) ERR(e);
+    e = BfM_FreeTrain(catObjForFile, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
     e = BfM_FreeTrain(&pid, PAGE_BUF);
     if (e < eNOERROR) ERR(e);
+    
 
     return(eNOERROR);
     
