@@ -129,7 +129,7 @@ Four EduOM_NextObject(
           /* OUT the object header of next object */
           offset = apage->slot[-i].offset;
           obj = &(apage->data[offset]);
-          objHdr = &obj->header; 
+          objHdr = &(obj->header); 
           
           e = BfM_FreeTrain(&pFid, PAGE_BUF);
           if (e < eNOERROR) ERR(e);
@@ -183,9 +183,9 @@ Four EduOM_NextObject(
           for (i = 0; i < apage->header.nSlots; i++) {
             if (apage->slot[-i].offset != EMPTYSLOT) {
               /* OUT the next Object of a current Object */
-              volNo = apage->header.pid.volNo;
-              pageNo = apage->header.pid.pageNo;
-              MAKE_OBJECTID(*nextOID, volNo, pageNo, i, apage->slot[i].unique);
+              volNo = pid.volNo;
+              pageNo = pid.pageNo;
+              MAKE_OBJECTID(*nextOID, volNo, pageNo, i, apage->slot[-i].unique);
     
               /* OUT the object header of next object */
               offset = apage->slot[-i].offset;
@@ -197,7 +197,7 @@ Four EduOM_NextObject(
               e = BfM_FreeTrain(&pid, PAGE_BUF);
               if (e < eNOERROR) ERR(e);
               
-              return(eNOERROR); 
+              return(EOS); 
             }
           }
         }
@@ -209,15 +209,15 @@ Four EduOM_NextObject(
             offset = apage->slot[-i].offset;
             obj = &(apage->data[offset]);
 
-            MAKE_OBJECTID(*nextOID, apage->header.pid.volNo, apage->header.pid.pageNo, i, apage->slot[-i].unique);
-            objHdr = &obj->header;
+            MAKE_OBJECTID(*nextOID, pid.volNo, pid.pageNo, i, apage->slot[-i].unique);
+            objHdr = &(obj->header);
             
             e = BfM_FreeTrain(&pFid, PAGE_BUF);
             if (e < eNOERROR) ERR(e);
             e = BfM_FreeTrain(&pid, PAGE_BUF);
             if (e < eNOERROR) ERR(e);
             
-            return(eNOERROR);
+            return(EOS);
           }
         }
       }
