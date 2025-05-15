@@ -1,0 +1,5 @@
+**/*.log
+**/log.txt
+**/*.o
+!**/cosmos.o
+!**/util_hash.o
