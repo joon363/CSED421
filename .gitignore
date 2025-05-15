@@ -3,3 +3,4 @@
 **/*.o
 !**/cosmos.o
 !**/util_hash.o
+**/EduBtM_Test
