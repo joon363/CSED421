@@ -69,10 +69,47 @@ void edubtm_CompactInternalPage(
     BtreeInternal       tpage;                  /* temporay page used to save the given page */
     Two                 apageDataOffset;        /* where the next object is to be moved */
     Two                 len;                    /* length of the leaf entry */
+    Two 		        alignedKlen;		    /* aligned length of the key length */
     Two                 i;                      /* index variable */
     btm_InternalEntry   *entry;                 /* an entry in leaf page */
+    Two 		lastSlot;		/* position of last slot */
 
-    
+    tpage = *apage;
+    apageDataOffset = 0;
+
+    /* slotNo에 대응하는 index entry를 제외한 page의 모든 index entry들을 
+       데이터 영역의 가장 앞부분부터 연속되게 저장함
+       » Index entry 저장 순서: 대응하는 slot 번호 순 */
+    lastSlot = apage->hdr.nSlots - 1;
+    for ( i = 0; i <= lastSlot ; i++ ){
+        if (i==slotNo) continue;
+        /*
+        ------------------------------------------------
+        |     spid    |     klen     |      kval[]     |
+        ------------------------------------------------
+        ShortPageID       Two            entry->klen
+        */
+        entry = (btm_InternalEntry*)(tpage.data[tpage.slot[-i]]);
+        alignedKlen = ALIGNED_LENGTH(sizeof(Two)+entry->klen);
+        len = sizeof(ShortPageID)+ alignedKlen;
+        memcpy((apage->data)+apageDataOffset, entry, len);
+        apage->slot[-i] = apageDataOffset;
+        apageDataOffset += len;
+    }
+
+    // slotNo에 대응하는 index entry를 데이터 영역 상에서의 마지막 index entry로 저장함
+    if (slotNo != NIL){
+        entry = (btm_InternalEntry*)(tpage.data[tpage.slot[-slotNo]]);
+        alignedKlen = ALIGNED_LENGTH(sizeof(Two)+entry->klen);
+        len = sizeof(ShortPageID)+ alignedKlen;
+        memcpy((apage->data)+apageDataOffset, entry, len);
+        apage->slot[-slotNo] = apageDataOffset;
+        apageDataOffset += len;
+    }
+    // Page Header를 갱신함
+    apage->hdr.unused = 0;
+    apage->hdr.free = apageDataOffset;
+    return (eNOERROR);
 
 } /* edubtm_CompactInternalPage() */
 
@@ -109,7 +146,42 @@ void edubtm_CompactLeafPage(
     Two                 i;                      /* index variable */
     btm_LeafEntry 	*entry;			/* an entry in leaf page */
     Two 		alignedKlen;		/* aligned length of the key length */
+    Two 		lastSlot;		/* position of last slot */
 
-    
+    tpage = *apage;
+    apageDataOffset = 0;
 
+    /* slotNo에 대응하는 index entry를 제외한 page의 모든 index entry들을 
+       데이터 영역의 가장 앞부분부터 연속되게 저장함
+       » Index entry 저장 순서: 대응하는 slot 번호 순 */
+    lastSlot = apage->hdr.nSlots - 1;
+    for ( i = 0; i <= lastSlot ; i++ ){
+        if (i==slotNo) continue;
+        /*
+        ------------------------------------------------------------
+        |  nObjects |   klen   |      key    |   value(Object ID)  |
+        ------------------------------------------------------------
+            Two         Two      (aligned)klen       ObjectID
+        */
+        entry = (btm_LeafEntry*)(tpage.data[tpage.slot[-i]]);
+        alignedKlen = ALIGNED_LENGTH(entry->klen);
+        len = sizeof(Two)+ sizeof(Two)+ alignedKlen+ sizeof(ObjectID);
+        memcpy((apage->data)+apageDataOffset, entry, len);
+        apage->slot[-i] = apageDataOffset;
+        apageDataOffset += len;
+    }
+
+    // slotNo에 대응하는 index entry를 데이터 영역 상에서의 마지막 index entry로 저장함
+    if (slotNo != NIL){
+        entry = (btm_LeafEntry*)&tpage.data[tpage.slot[-slotNo]];
+        alignedKlen = ALIGNED_LENGTH(entry->klen);
+        len = sizeof(Two)+ sizeof(Two)+ alignedKlen+ sizeof(ObjectID);
+        memcpy(&apage->data[apageDataOffset], entry, len);
+        apage->slot[-slotNo] = apageDataOffset;
+        apageDataOffset += len;
+    }
+    // Page Header를 갱신함
+    apage->hdr.unused = 0;
+    apage->hdr.free = apageDataOffset;
+    return (eNOERROR);
 } /* edubtm_CompactLeafPage() */
