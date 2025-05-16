@@ -147,16 +147,5 @@ Four edubtm_root_insert(
     if (e < eNOERROR) ERR(e);
     
     return(eNOERROR);
-    /*
-    * 기존root page를 새로운 root page로서 초기화함
-    * – B+ tree 색인의 root page의 page ID를 일관되게 유지하기 위함
-    * 할당받은page와 root page split으로 생성된 page가 새로운 root page의 자식 page들이 되도록 설정함
-    * – Split으로 생성된 page를 가리키는 internal index entry를 새로운 root page에 삽입함
-    * – 새로운root page의 header의 p0 변수에 할당 받은 page의 번호를 저장함
-    * – 새로운root page의 두 자식 page들이leaf인 경우, 두 자식 page들간의doubly linked list를 설정함
-    *     » Split으로 생성된 page가 할당 받은 page의 다음 page가되도록설정함
-    */
-    
-    return(eNOERROR);
     
 } /* edubtm_root_insert() */

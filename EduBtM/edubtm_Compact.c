@@ -106,9 +106,11 @@ void edubtm_CompactInternalPage(
         apage->slot[-slotNo] = apageDataOffset;
         apageDataOffset += len;
     }
+    
     // Page Header를 갱신함
     apage->hdr.unused = 0;
     apage->hdr.free = apageDataOffset;
+
     return (eNOERROR);
 
 } /* edubtm_CompactInternalPage() */
@@ -180,8 +182,10 @@ void edubtm_CompactLeafPage(
         apage->slot[-slotNo] = apageDataOffset;
         apageDataOffset += len;
     }
+
     // Page Header를 갱신함
     apage->hdr.unused = 0;
     apage->hdr.free = apageDataOffset;
+
     return (eNOERROR);
 } /* edubtm_CompactLeafPage() */
