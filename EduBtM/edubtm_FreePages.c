@@ -81,8 +81,37 @@ Four edubtm_FreePages(
     btm_LeafEntry       *lEntry;        /* a leaf entry */
     DeallocListElem     *dlElem;        /* an element of dealloc list */
 
+    /* Page header의 type에서 해당 page가 deallocate 될 page임을 나타내는 bit를set
+     및 나머지bit들을 unset 함*/
+    e = BfM_GetTrain(curPid, (char**)&apage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
 
+    if(apage->any.hdr.type & INTERNAL){
+        /*If the given page is an internal page, recursively free all child pages before it is freed.*/
+        MAKE_PAGEID(tPid, curPid->volNo, apage->bi.hdr.p0);
+        e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
+        if (e < 0) ERR(e);
+
+        for (i = 0; i<apage->bi.hdr.nSlots; i++){
+            iEntryOffset = apage->bi.slot[-i];
+            iEntry = (btm_InternalEntry*)(&apage->bi.data[iEntryOffset]);
+
+            MAKE_PAGEID(tPid, curPid->volNo, iEntry->spid);
+            e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
+            if (e < 0) ERR(e);
+        }
+    }
+    /* Note: EduBtM에서는 Overflow 고려 안함.*/
     
+    // Allocate a new dealloc list element from the dlPool given as a parameter
+    e = Util_getElementFromPool(dlPool, &dlElem);
+    if (e < eNOERROR) ERR(e);
+    // Store the information about the pages to be deallocated into the element allocated.
+    dlElem->type = DL_PAGE;
+    dlElem->elem.pid = tPid;
+    // Insert the element into the dealloc list as the first element.
+    dlElem->next = dlHead->next;
+    dlHead->next = dlElem; 
     return(eNOERROR);
     
 }   /* edubtm_FreePages() */
