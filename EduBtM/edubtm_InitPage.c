@@ -99,7 +99,14 @@ Four edubtm_InitLeaf(
     Four e;			/* error number */
     BtreeLeaf *page;		/* a page pointer */
 
-
+    page->hdr.pid = *leaf;
+    page->hdr.flags = BTREE_PAGE_TYPE;
+    page->hdr.type = root?ROOT:LEAF;
+    page->hdr.nSlots = 0;
+    page->hdr.free = 0;
+    page->hdr.prevPage = NIL;
+    page->hdr.nextPage = NIL;
+    page->hdr.unused = 0;
     
     return(eNOERROR);
     
