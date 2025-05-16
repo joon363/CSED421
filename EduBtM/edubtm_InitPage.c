@@ -66,6 +66,9 @@ Four edubtm_InitInternal(
     Four e;			/* error number */
     BtreeInternal *page;	/* a page pointer */
 
+    e = BfM_GetNewTrain(internal, (char**)&page, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+
     page->hdr.pid = *internal;
     page->hdr.flags = BTREE_PAGE_TYPE;
     page->hdr.type = root?ROOT:INTERNAL;
@@ -73,8 +76,12 @@ Four edubtm_InitInternal(
     page->hdr.nSlots = 0;
     page->hdr.free = 0;
     page->hdr.unused = 0;
-
     
+    e = BfM_SetDirty(internal, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    e = BfM_FreeTrain(internal, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+
     return(eNOERROR);
     
 }  /* edubtm_InitInternal() */
@@ -106,6 +113,9 @@ Four edubtm_InitLeaf(
     Four e;			/* error number */
     BtreeLeaf *page;		/* a page pointer */
 
+    e = BfM_GetNewTrain(leaf, (char**)&page, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+
     page->hdr.pid = *leaf;
     page->hdr.flags = BTREE_PAGE_TYPE;
     page->hdr.type = root?ROOT:LEAF;
@@ -114,6 +124,11 @@ Four edubtm_InitLeaf(
     page->hdr.prevPage = NIL;
     page->hdr.nextPage = NIL;
     page->hdr.unused = 0;
+    
+    e = BfM_SetDirty(leaf, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    e = BfM_FreeTrain(leaf, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
     
     return(eNOERROR);
     
