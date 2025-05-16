@@ -66,6 +66,13 @@ Four edubtm_InitInternal(
     Four e;			/* error number */
     BtreeInternal *page;	/* a page pointer */
 
+    page->hdr.pid = *internal;
+    page->hdr.flags = BTREE_PAGE_TYPE;
+    page->hdr.type = root?ROOT:INTERNAL;
+    page->hdr.p0 = NIL;
+    page->hdr.nSlots = 0;
+    page->hdr.free = 0;
+    page->hdr.unused = 0;
 
     
     return(eNOERROR);
