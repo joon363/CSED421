@@ -83,6 +83,7 @@ Four edubtm_KeyCompare(
     double                      d1, d2;		/* double values */
     PageID                      pid1, pid2;	/* PageID values */
     OID                         oid1, oid2;     /* OID values */
+    Two                         offset1=0, offset2=0;
     
 
     /* Error check whether using not supported functionality by EduBtM */
@@ -92,7 +93,47 @@ Four edubtm_KeyCompare(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
-        
+    if(kdesc->flag & KEYFLAG_UNIQUE && kdesc->nparts!=1)
+        ERR(eBADPARAMETER_BTM);
+
+    for(i=0; i<kdesc->nparts; i++)
+    {
+        switch(kdesc->kpart[i].type){
+            case SM_INT:
+                i1 = *(Four_Invariable*)(key1->val +offset1);
+                i2 = *(Four_Invariable*)(key2->val +offset2);
+                if(i1 == i2){
+                    offset1 += 4;
+                    offset2 += 4;
+                    break;
+                } else 
+                    return i1 < i2? LESS: GREATER;
+            case SM_VARSTRING:
+                /*
+                -----------------------------
+                type   |   (len)   |   (data)
+                -----------------------------
+                4 bytes    2 bytes     len bytes
+                */
+                len1 = *(Two*)&key1->val[offset1];
+                len2 = *(Two*)&key2->val[offset2];
+                offset1+=2;
+                offset2+=2;
+                for(i = offset1, j = offset2; i < len1, j < len2; i++, j++){
+                    if(key1->val[i]==key2->val[j])
+                        continue;
+                    else
+                        return key1->val[i]>key2->val[j]? GREATER:LESS;
+                }
+                if (len1 != len2)
+                    return len1 > len2? GREATER:LESS;
+                offset1 += len1;
+                offset2 += len2;
+                break;
+            default:
+                ERR(eNOTSUPPORTED_EDUBTM);
+        }
+    }
     return(EQUAL);
     
 }   /* edubtm_KeyCompare() */
