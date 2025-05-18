@@ -90,7 +90,7 @@ Four edubtm_FreePages(
         /*If the given page is an internal page, recursively free all child pages before it is freed.*/
         MAKE_PAGEID(tPid, curPid->volNo, apage->bi.hdr.p0);
         e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
-        if (e < 0) ERR(e);
+        if (e < eNOERROR) ERR(e);
 
         for (i = 0; i<apage->bi.hdr.nSlots; i++){
             iEntryOffset = apage->bi.slot[-i];
@@ -98,7 +98,7 @@ Four edubtm_FreePages(
 
             MAKE_PAGEID(tPid, curPid->volNo, iEntry->spid);
             e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
-            if (e < 0) ERR(e);
+            if (e < eNOERROR) ERR(e);
         }
     }
     /* Note: EduBtM에서는 Overflow 고려 안함.*/
