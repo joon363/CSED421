@@ -237,7 +237,7 @@ Four edubtm_InsertLeaf(
 
         // Page의 header을 갱신함
         page->hdr.free = page->hdr.free + entryLen;
-        page->hdr.nSlots = page->hdr.nSlots + 1;
+        page->hdr.nSlots ++;
     }
     /*• Page에 여유 영역이없는경우(page overflow),
         – edubtm_SplitLeaf()를 호출하여 page를 split 함
@@ -298,7 +298,9 @@ Four edubtm_InsertInternal(
     Four                e;              /* error number */
     Two                 i;              /* index */
     Two                 entryOffset;    /* starting offset of an internal entry */
+    Two                 alignedKlen;    
     Two                 entryLen;       /* length of the new entry */
+    Two                 neededSpace;
     btm_InternalEntry   *entry;         /* an internal entry of an internal page */
 
 
@@ -306,7 +308,50 @@ Four edubtm_InsertInternal(
     /*@ Initially the flag are FALSE */
     *h = FALSE;
     
+    // 새로운index entry 삽입을 위해 필요한 자유 영역의 크기를계산함
+    /*
+    ------------------------------------------------
+    |     spid    |     klen     |      kval[]     |
+    ------------------------------------------------
+    ShortPageID       Two            entry->klen
+    */
+    alignedKlen = ALIGNED_LENGTH(sizeof(Two)+entry->klen);
+    entryLen = sizeof(ShortPageID)+ alignedKlen;
+    // Align 된 key 영역을 고려한 새로운 index entry의 크기 + slot의 크기
+    neededSpace = entryLen+ sizeof(Two);
     
+    // • Page에 여유 영역이있는경우,
+    if (BL_FREE(page) >= neededSpace){
+        // – 필요시page를compact 함  
+        if (BL_CFREE(page) < neededSpace)
+            edubtm_CompactLeafPage(page, NIL);
+        
+        // » 결정된slot 번호를갖는slot을 사용하기 위해slot array를 재배열함
+        for(i = page->hdr.nSlots - 1; i > high; i--){
+            page->slot[-(i+1)] = page->slot[-i];
+        }
+        // » 결정된slot 번호를갖는slot에 새로운 index entry의 offset을 저장함
+        entryOffset = page->hdr.free;
+        page->slot[-(high+1)] = entryOffset;
+
+        // » Page의 contiguous free area에 새로운 index entry를 복사함
+        entry = (btm_InternalEntry*)&page->data[entryOffset];
+        entry->spid = item->spid; // 유일key를 사용하는EduBtM에서는 각key 값 갖는 object는 한개씩만 존재함
+        entry->klen = item->klen;
+        memcpy(entry->kval, item->kval, item->klen);
+
+        // Page의 header을 갱신함
+        page->hdr.free = page->hdr.free + entryLen;
+        page->hdr.nSlots ++;
+    }
+    /*• Page에 여유 영역이없는경우(page overflow),
+        – edubtm_SplitInternal()를 호출하여 page를 split 함
+        – Split으로 생성된 새로운 internal page를 가리키는 internal index entry를 반환함 */
+    else{
+        e = edubtm_SplitInternal(catObjForFile, page, high, item, ritem);
+        if (e < eNOERROR) ERR(e);
+        *h = TRUE; // is Splitted
+    }
 
     return(eNOERROR);
     
