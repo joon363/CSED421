@@ -117,7 +117,58 @@ Four edubtm_Insert(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
-    
+    *f = *h = FALSE;
+    lf = lh = FALSE;
+
+    e = BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+
+    if(apage->any.hdr.type & INTERNAL){
+        /*  
+        – 새로운<object의 key, object ID> pair를 삽입할 leaf page를 찾기위해
+          다음으로방문할자식page를결정함
+        */
+        if(edubtm_BinarySearchInternal(apage, kdesc, kval, &idx)){
+            iEntryOffset = apage->bi.slot[-idx];
+            iEntry = (btm_InternalEntry*)&apage->bi.data[iEntryOffset];
+            MAKE_PAGEID(newPid, root->volNo, iEntry->spid);
+        }
+        else 
+            MAKE_PAGEID(newPid, root->volNo, apage->bi.hdr.p0);
+
+        /*
+        – 결정된자식page를 root page로 하는 B+ subtree에 새로운 <object의 key, object ID> pair를 삽입하기 위해 
+          재귀적으로 edubtm_Insert()를 호출함
+        */
+        e = edubtm_Insert(catObjForFile, &newPid, kdesc, kval, oid, &lf, &lh, &litem, dlPool, dlHead);
+        if (e < eNOERROR) ERR(e);
+
+        // – 결정된자식page에서split이 발생한 경우, 
+        if(lh){
+            /* 해당 split으로 생성된새로운page를가리키는internal index entry를 파라미터로주어진root page에 삽입함
+                » 해당index entry의 삽입 위치 (slot 번호) 를 결정함
+                    • Slot array에 저장된 index entry의 offset들이 index entry의 key 순으로 정렬되어야 함 */
+            tKey.len = litem.klen;
+            memcpy(tKey.val, litem.kval, litem.klen);
+            edubtm_BinarySearchInternal(&(apage->bi), kdesc, &tKey, &idx);
+            /* » edubtm_InsertInternal()을 호출하여 결정된 slot 번호로index entry를 삽입함
+            – 파라미터로주어진root page에서 split이 발생한 경우, 해당split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함 */
+            e = edubtm_InsertInternal(catObjForFile, &(apage->bi), &litem, idx, h, item);
+            if (e < eNOERROR) ERR(e);
+        }
+    }
+    else{
+        /*edubtm_InsertLeaf()를 호출하여 해당 page에 새로운 <object의 key, object ID> pair를 삽입함
+        – Split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는internal index entry를 반환함*/
+        e = edubtm_InsertLeaf(catObjForFile, root, &apage->bl, kdesc, kval, oid, f, h, item);
+        if (e < eNOERROR) ERR(e);
+    }
+
+    e = BfM_SetDirty(root, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    e = BfM_FreeTrain(root, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+
     return(eNOERROR);
     
 }   /* edubtm_Insert() */
