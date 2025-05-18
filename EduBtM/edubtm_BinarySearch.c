@@ -87,7 +87,34 @@ Boolean edubtm_BinarySearchInternal(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
+    // Basic Binary Search with index
+    low = 0;
+    high = ipage->hdr.nSlots - 1;
 
+    while (low <= high){
+        mid = (low + high) / 2;
+        entry = (btm_InternalEntry*)&ipage->data[ipage->slot[-mid]];
+        cmp = edubtm_KeyCompare(kdesc, kval, &entry->klen);
+        switch (cmp)
+        {
+        case GREATER:
+            low = mid + 1;
+            break;
+        case LESS:
+            high = mid - 1;
+            break;        
+        default: // EQUAL
+            *idx = mid;
+            return TRUE; // found!
+            break;
+        }
+    }
+
+    *idx = high; 
+    return FALSE; // not found
+    /* note: 주어진 키보다 작은게 하나도 없다면, high=mid-1; 했을때 
+    low=0, high=-1 에서 종료됨. 따라서 *idx=-1과 동일한 효과를 낸다.
+    */
     
 } /* edubtm_BinarySearchInternal() */
 
@@ -134,6 +161,42 @@ Boolean edubtm_BinarySearchLeaf(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
+    /*
+    파라미터로주어진key 값과같은key 값을갖는index entry가존재하는경우,
+     – 해당index entry의 slot 번호 및 TRUE를 반환함*/
+    /*
+    파라미터로주어진key 값과같은key 값을갖는index entry가존재하지않는경우,
+    – 파라미터로주어진key 값보다작은key 값을갖는index entry들중
+      가장큰key 값을갖는index entry의 slot 번호 및 FALSE를 반환함. 
+      주어진key 값보다 작은key 값을갖는entry가 없을경우slot 번호로-1을 반환함.
+    */
 
-    
+    // Basic Binary Search with index
+    low = 0;
+    high = lpage->hdr.nSlots - 1;
+
+    while (low <= high){
+        mid = (low + high) / 2;
+        entry = (btm_LeafEntry*)&lpage->data[lpage->slot[-mid]];
+        cmp = edubtm_KeyCompare(kdesc, kval, &entry->klen);
+        switch (cmp)
+        {
+        case GREATER:
+            low = mid + 1;
+            break;
+        case LESS:
+            high = mid - 1;
+            break;        
+        default: // EQUAL
+            *idx = mid;
+            return TRUE; // found!
+            break;
+        }
+    }
+
+    *idx = high; 
+    return FALSE; // not found
+    /* note: 주어진 키보다 작은게 하나도 없다면, high=mid-1; 했을때 
+    low=0, high=-1 에서 종료됨. 따라서 *idx=-1과 동일한 효과를 낸다.
+    */
 } /* edubtm_BinarySearchLeaf() */
