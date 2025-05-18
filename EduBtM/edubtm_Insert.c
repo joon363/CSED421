@@ -172,6 +172,7 @@ Four edubtm_InsertLeaf(
     Two                         alignedKlen;    /* aligned length of the key length */
     PageID                      ovPid;          /* PageID of an overflow page */
     Two                         entryLen;       /* length of an entry */
+    Two                         neededSpace;
     ObjectID                    *oidArray;      /* an array of ObjectIDs */
     Two                         oidArrayElemNo; /* an index for the ObjectID array */
 
@@ -187,7 +188,75 @@ Four edubtm_InsertLeaf(
     /*@ Initially the flags are FALSE */
     *h = *f = FALSE;
     
+    /*
+    • 새로운index entry의 삽입 위치 (slot 번호) 를 결정함
+        – Slot array에 저장된 index entry의 offset들이 index entry의 key 순으로 정렬되어야 함
+        – 새로운index entry의 key 값과 동일한 key 값을 갖는 index entry가 존재하는 경우
+          eDUPLICATEDKEY_BTM error 를 반환함
+    */
+    if (edubtm_BinarySearchLeaf(page, kdesc, kval, &idx)) 
+        ERR(eDUPLICATEDKEY_BTM);
 
+    // 새로운index entry 삽입을 위해 필요한 자유 영역의 크기를계산함
+    alignedKlen = 0;
+    for(i=0; i<kdesc->nparts; i++)
+    {
+        alignedKlen += (kdesc->kpart[i].type == SM_INT) ? \
+            ALIGNED_LENGTH(kdesc->kpart[i].length) : ALIGNED_LENGTH(kval->len);
+    }
+    /*
+    ------------------------------------------------------------
+    |  nObjects |   klen   |      key    |   value(Object ID)  |
+    ------------------------------------------------------------
+        Two         Two      (aligned)klen       ObjectID
+    */
+    entryLen = sizeof(Two)+ sizeof(Two)+ alignedKlen+ sizeof(ObjectID);
+    // Align 된 key 영역을 고려한 새로운 index entry의 크기 + slot의 크기
+    neededSpace = entryLen+ sizeof(Two);
+    
+    // • Page에 여유 영역이있는경우,
+    if (BL_FREE(page) >= neededSpace){
+        // – 필요시page를compact 함  
+        if (BL_CFREE(page) < neededSpace)
+            edubtm_CompactLeafPage(page, NIL);
+        
+        // » 결정된slot 번호를갖는slot을 사용하기 위해slot array를 재배열함
+        for(i = page->hdr.nSlots - 1; i > idx; i--){
+            page->slot[-(i+1)] = page->slot[-i];
+        }
+        // » 결정된slot 번호를갖는slot에 새로운 index entry의 offset을 저장함
+        entryOffset = page->hdr.free;
+        page->slot[-(idx+1)] = entryOffset;
+
+        // » Page의 contiguous free area에 새로운 index entry를 복사함
+        entry = (btm_LeafEntry*)&page->data[entryOffset];
+        entry->nObjects = 1; // 유일key를 사용하는EduBtM에서는 각key 값 갖는 object는 한개씩만 존재함
+        entry->klen = kval->len;
+        memcpy(entry->kval, kval->val, alignedKlen);
+        //memcpy(&entry->kval[alignedKlen], oid, sizeof(ObjectID));
+
+        // Page의 header을 갱신함
+        page->hdr.free = page->hdr.free + entryLen;
+        page->hdr.nSlots = page->hdr.nSlots + 1;
+    }
+    /*• Page에 여유 영역이없는경우(page overflow),
+        – edubtm_SplitLeaf()를 호출하여 page를 split 함
+        – Split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함 */
+    else{
+        /* Leaf
+        ----------------------------------------------------
+         oid      | nObjects |  klen  | char kval[MAXKEYLEN]
+         ObjectID |    Two   |  Two   |
+        ----------------------------------------------------
+                             [           KeyValue          ]
+        */
+        leaf.oid = *oid;
+        leaf.nObjects = 1;
+        memcpy(&leaf.klen, kval, sizeof(KeyValue));
+        e = edubtm_SplitLeaf(catObjForFile, pid, page, idx, &leaf, item);
+        if (e < eNOERROR) ERR(e);
+        *h = TRUE; // is Splitted
+    }
 
     return(eNOERROR);
     
