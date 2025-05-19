@@ -93,7 +93,56 @@ Four edubtm_SplitInternal(
     btm_InternalEntry           *nEntry;                /* internal entry in the new page, npage*/
     Boolean                     isTmp;
 
+    e = btm_AllocPage(catObjForFile, &fpage->hdr.pid, &newPid);
+    if (e < 0) ERR(e);
 
+    e = edubtm_InitInternal(&newPid, FALSE, FALSE);
+    if (e < 0) ERR(e);
+
+    e = BfM_GetNewTrain(&newPid, (char**)&npage, PAGE_BUF);
+    if (e < 0) ERR(e);
+
+    maxLoop = fpage->hdr.nSlots + 1;
+    sum = 0;
+    j = maxLoop - 1;
+    flag = TRUE;
+    // get sorted array
+    for(i = maxLoop - 1; i >= 0 && sum <= BI_HALF; i--){
+        if (i == high + 1){
+            flag = FALSE;
+            entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + item->klen);
+        }else{
+            fEntryOffset = fpage->slot[-j];
+            fEntry = (btm_InternalEntry*)&fpage->data[fEntryOffset];
+            entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
+            j--;
+        }
+        fpage->hdr.unused += entryLen + sizeof(SlotNo);
+        sum += entryLen + sizeof(SlotNo);
+    }
+    fpage->hdr.nSlots = j + 1;
+
+    k = 0;
+    npage->hdr.p0 = ((btm_InternalEntry*)&fpage->data[fpage->slot[-(j+1)]])->spid;
+    for(i = j + 2; i < maxLoop; i++, k++){
+        nEntryOffset = npage->hdr.free;
+        npage->slot[-k] = nEntryOffset;
+        nEntry = (btm_InternalEntry*)&npage->data[nEntryOffset];
+        if( i == high + 1 && flag == TRUE){
+            nEntry->klen = item->klen;
+            nEntry->spid = item->spid;
+            memcpy(nEntry->kval, item->kval, item->klen);
+            entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + item->klen);
+        } else{
+            fEntryOffset = fpage->slot[-i];
+            fEntry = (btm_InternalEntry*)&fpage->data[fEntryOffset];
+            nEntry->klen = fEntry->klen;
+            nEntry->spid = fEntry->spid;
+            entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
+            memcpy(nEntry->kval, fEntry->kval, fEntry->klen);
+        }
+        npage->hdr.free += entryLen + sizeof(SlotNo);
+    }
     
     return(eNOERROR);
     
@@ -158,7 +207,130 @@ Four edubtm_SplitLeaf(
     Boolean                     flag;
     Boolean                     isTmp;
  
+    /* 새로운page를 할당받음 */
+    e = btm_AllocPage(catObjForFile, root, &newPid);
+    if (e < eNOERROR) ERR(e);
+    e = BfM_GetNewTrain(&newPid, (char**)&npage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+
+    /* 할당받은page를 leaf page로 초기화함*/
+    e = edubtm_InitLeaf(&newPid, FALSE, FALSE);
+    if (e < eNOERROR) ERR(e);
     
+    /* 기존index entry들 및 삽입할 index entry를 key 순으로 정렬하여
+    overflow가 발생한 page 및 할당 받은 page에 나누어 저장함
+    – 먼저, overflow가 발생한 page에 데이터 영역을 50% 이상 채우는 수의index entry들을 저장함
+    – 나머지index entry들을 할당 받은 page에 저장함
+    – 각page의 header를 갱신함*/
+    maxLoop = fpage->hdr.nSlots + 1;
+    itemEntryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen) + sizeof(ObjectID); 
+    sum = 0;
+    j = 0;
+
+    // get sorted array
+    for(i = 0; i < maxLoop && sum <= BL_HALF; i++){
+
+        if (i == high + 1){
+            flag = TRUE;
+            entryLen = itemEntryLen; 
+        }else{
+            fEntryOffset = fpage->slot[-j];
+            fEntry = &fpage->data[fEntryOffset];
+            entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(fEntry->klen) + sizeof(ObjectID); 
+            j++;
+        }
+        sum += (entryLen + sizeof(Two));
+    }
+    fpage->hdr.nSlots = j;
+
+    for (k = 0; i < maxLoop; i++, k++){
+        nEntryOffset = npage->hdr.free;
+        npage->slot[-k] = nEntryOffset;
+        nEntry = &npage->data[nEntryOffset];
+        
+        if (i == high + 1){
+            nEntry->klen = item->klen;
+            nEntry->nObjects = item->nObjects;
+            
+            entryLen = itemEntryLen;
+            memcpy(nEntry->kval, item->kval, item->klen);
+            memcpy(&nEntry->kval[ALIGNED_LENGTH(item->klen)], &item->oid, OBJECTID_SIZE);
+            // *(ObjectID*)&nEntry->kval[entryLen] = item->oid;
+        }
+        else{
+            fEntryOffset = fpage->slot[-j];
+            fEntry = &fpage->data[fEntryOffset];
+            entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(fEntry->klen) + sizeof(ObjectID);
+            
+            memcpy(nEntry, fEntry, entryLen);
+            
+            if (fEntryOffset + entryLen == fpage->hdr.free)
+                fpage->hdr.free -= entryLen;
+            else
+                fpage->hdr.unused += entryLen;
+
+            j++;
+        }
+
+        npage->hdr.free += entryLen;
+    }
+    npage->hdr.nSlots = k;
+
+    if(flag){
+        for(i = fpage->hdr.nSlots - 1; i > high; i--){
+            fpage->slot[-(i+1)] = fpage->slot[-i];
+        }
+
+        if (BI_CFREE(fpage) < itemEntryLen){
+            edubtm_CompactLeafPage(fpage, NIL);
+        }
+
+        fpage->slot[-(high + 1)] = fpage->hdr.free;
+
+        fEntry = &fpage->data[fpage->hdr.free];
+        fEntry->nObjects = item->nObjects;
+        fEntry->klen = item->klen;
+
+        memcpy(fEntry->kval, item->kval, item->klen);        
+        memcpy(&fEntry->kval[ALIGNED_LENGTH(item->klen)], &item->oid, OBJECTID_SIZE);
+
+        fpage->hdr.free += sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen) + sizeof(ObjectID);
+        fpage->hdr.nSlots ++;
+    }
+
+    nEntry = &npage->data[npage->slot[0]];
+    ritem->spid = npage->hdr.pid.pageNo;
+    ritem->klen = nEntry->klen;
+    memcpy(ritem->kval, nEntry->kval, nEntry->klen);
+
+    if (fpage->hdr.type & ROOT)
+        fpage->hdr.type = LEAF;
+
+    // initialize page list
+    npage->hdr.nextPage = fpage->hdr.nextPage;
+    npage->hdr.prevPage = fpage->hdr.pid.pageNo;
+    fpage->hdr.nextPage = npage->hdr.pid.pageNo;
+
+    if (npage->hdr.nextPage != NIL){
+        MAKE_PAGEID(nextPid, npage->hdr.pid.volNo, npage->hdr.nextPage);
+
+        e = BfM_GetTrain(&nextPid, &mpage, PAGE_BUF);
+        if(e < 0) ERR(e);
+        
+        mpage->hdr.prevPage = npage->hdr.pid.pageNo;
+
+        e = BfM_SetDirty(&nextPid, PAGE_BUF);
+        if(e < 0) ERR(e);
+
+        e = BfM_FreeTrain(&nextPid, PAGE_BUF);
+        if(e < 0) ERR(e);
+    }
+
+    e = BfM_SetDirty(&newPid, PAGE_BUF);
+    if(e < 0) ERR(e);
+
+    e = BfM_FreeTrain(&newPid, PAGE_BUF);
+    if(e < 0) ERR(e);
 
     return(eNOERROR);
     
