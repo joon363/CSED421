@@ -92,7 +92,25 @@ Four EduBtM_Fetch(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
+    /*파라미터로주어진startCompOp가 SM_BOF일 경우,
+    – B+ tree 색인의 첫 번째object (가장 작은 key 값을 갖는 leaf index entry) 를 검색함. */
+    if (startCompOp == SM_BOF){
+        e = edubtm_FirstObject(root, kdesc, stopKval, stopCompOp, cursor);
+        if (e < eNOERROR) ERR(e);
+    }
+    /*파라미터로주어진startCompOp가 SM_EOF일 경우,
+    – B+ tree 색인의 마지막 object (가장 큰 key 값을 갖는 leaf index entry) 를검색함. */ 
+    else if (startCompOp == SM_EOF){
+        e = edubtm_LastObject(root, kdesc, stopKval, stopCompOp, cursor);
+        if (e < eNOERROR) ERR(e);      
+    } 
     
+    /* 이외의경우, edubtm_Fetch()를 호출하여 B+ tree 색인에서 검색 조건을 만족하는 첫번째
+    <object의 key, object ID> pair가 저장된 leaf index entry를 검색함 */
+    else{
+        e = edubtm_Fetch(root, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
+        if (e < eNOERROR) ERR(e);
+    }
 
     return(eNOERROR);
 
