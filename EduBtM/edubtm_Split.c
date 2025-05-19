@@ -205,8 +205,7 @@ Four edubtm_SplitLeaf(
     Two                         alignedKlen;    /* aligned length of the key length */
     Two                         itemEntryLen;   /* length of entry for item */
     Two                         entryLen;       /* entry length */
-    Boolean                     flag;
-    Boolean                     isTmp;
+    Boolean                     flag = FALSE;
  
     /* 새로운page를 할당받음 */
     e = btm_AllocPage(catObjForFile, root, &newPid);
