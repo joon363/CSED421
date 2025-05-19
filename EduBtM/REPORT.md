@@ -81,15 +81,29 @@ Student id: 20220312
     Root page에서 split이 발생하여 새로운 root page 생성이필요한경우, edubtm_root_insert()를 호출하여 이를처리함
 
     - edubtm_Insert: 
-        - edubtm_BinarySearchInternal: low, mid, high를 사용해 이진 탐색을 시행한다. 
-            - edubtm_KeyCompare: KeyDesc를 따라 순회하면서 키의 대소비교를 한다.
-        - edubtm_InsertInternal
-            - edubtm_CompactInternalPage
-            - edubtm_SplitInternal
-        - edubtm_InsertLeaf
-            - edubtm_BinarySearchLeaf
-            - edubtm_CompactLeafPage
-            - edubtm_SplitLeaf
+        - 새로운<object의 key, object ID> pair를 삽입할 leaf page를 찾기위해
+          다음으로방문할자식page를결정함.
+            - edubtm_BinarySearchInternal: low, mid, high를 사용해 이진 탐색을 시행한다. 
+                - edubtm_KeyCompare: KeyDesc를 따라 순회하면서 키의 대소비교를 한다.
+        - 결정된자식page를 root page로 하는 B+ subtree에 새로운 <object의 key, object ID> pair를 삽입하기 위해 재귀적으로 edubtm_Insert()를 호출함.
+        - 페이지가 internal일 경우
+            - 결정된자식page에서split이 발생한 경우, 
+            - 해당 split으로 생성된새로운page를가리키는internal index entry를 파라미터로주어진root page에 삽입함.
+            - edubtm_InsertInternal()을 호출하여 결정된 slot 번호로index entry를 삽입함
+            - edubtm_InsertInternal
+                - 새로운index entry의 삽입 위치 (slot 번호) 를 결정함
+                - 새로운index entry 삽입을 위해 필요한 자유 영역의 크기를계산함.
+                - Page에 여유 영역이있는경우, 필요시page를compact 하고, slot array를 재배열하고 Page의 header을 갱신함.
+                    - edubtm_CompactInternalPage: slotNo에 대응하는 index entry를 제외한 page의 모든 index entry들을 데이터 영역의 가장 앞부분부터 연속되게 저장함
+                - Page에 여유 영역이없는경우, edubtm_SplitInternal()를 호출하여 page를 split 함.
+                    - edubtm_SplitInternal: 새로운 페이지를 하나 만들고, 절반만 남겨놓고 새로운 페이지에 데이터를 옮긴다.
+        - leaf일 경우, edubtm_InsertLeaf()를 호출하여 해당 page에 새로운 <object의 key, object ID> pair를 삽입함.
+            - edubtm_InsertLeaf
+                - 새로운index entry의 삽입 위치 (slot 번호) 를 결정함
+                - 새로운index entry 삽입을 위해 필요한 자유 영역의 크기를계산함.
+                - Page에 여유 영역이있는경우, 필요시page를compact 하고, slot array를 재배열하고 Page의 header을 갱신함.
+                - Page에 여유 영역이없는경우, edubtm_SplitLeaf()를 호출하여 page를 split 함.
+                    - edubtm_SplitLeaf: 새로운 페이지를 하나 만들고, 절반만 남겨놓고 새로운 페이지에 데이터를 옮긴다.
 
 - EduBtM_DeleteObject
 
