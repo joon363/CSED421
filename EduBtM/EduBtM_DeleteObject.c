@@ -104,11 +104,34 @@ Four EduBtM_DeleteObject(
     }
 
 
-	/* Delete following 3 lines before implement this function */
-	printf("and delete operation has not been implemented yet.\n");
-	return(eNOTSUPPORTED_EDUBTM);
+	e = BfM_GetTrain(catObjForFile, (char**)&catPage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    GET_PTR_TO_CATENTRY_FOR_BTREE(catObjForFile, catPage, catEntry);
+    MAKE_PHYSICALFILEID(pFid, catEntry->fid.volNo, catEntry->firstPage);
+    /*edubtm_Delete()를 호출하여 삭제할 object에 대한 <object의key, object ID> pair를 B+ tree 색인에서 삭제함*/
+    lf = lh = FALSE;
+    e = edubtm_Delete(catObjForFile, root, kdesc, kval, oid, &lf, &lh, &item, dlPool, dlHead);
+    if (e < eNOERROR) ERR(e);
+
+    /*Root page에서 underflow가 발생한 경우, btm_root_delete()를 호출하여 이를처리함*/
+    if (lf == TRUE){
+        e = btm_root_delete(&pFid, root, dlPool, dlHead);
+        if (e < eNOERROR) ERR(e);
+        e = BfM_SetDirty(root, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
+    }
+    /*Root page에서 split이 발생한 경우, edubtm_root_insert()를 호출하여이를처리함*/
+    if (lh == TRUE){
+        e = edubtm_root_insert(catObjForFile, root, &item);
+        if (e < eNOERROR) ERR(e);
+        e = BfM_SetDirty(root, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
+
+    } else 
 
     
+    e = BfM_FreeTrain(catObjForFile, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
     return(eNOERROR);
     
 }   /* EduBtM_DeleteObject() */

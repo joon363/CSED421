@@ -141,12 +141,13 @@ Four edubtm_Delete(
 
     // 파라미터로 주어진 root page가 internal page인 경우
     if (rpage->any.hdr.type & INTERNAL){
-        if(edubtm_BinarySearchInternal(rpage, kdesc, kval, &idx)){
+        edubtm_BinarySearchInternal(rpage, kdesc, kval, &idx);
+        if (idx == -1){
+            MAKE_PAGEID(child, root->volNo, rpage->bi.hdr.p0);
+        } else{
             iEntry = (btm_InternalEntry*)&rpage->bi.data[rpage->bi.slot[-idx]];
             MAKE_PAGEID(child, root->volNo, iEntry->spid);
         }
-        else 
-            MAKE_PAGEID(child, root->volNo, rpage->bi.hdr.p0);
 
         // 재귀적 호출
         e = edubtm_Delete(catObjForFile, &child, kdesc, kval, oid, &lf, &lh, &litem, dlPool, dlHead);
@@ -154,17 +155,18 @@ Four edubtm_Delete(
 
         // Underflow 발생시 underflow 
         if (lf){
-            e = btm_Underflow(&pFid, rpage, &child, idx, f, h, &litem, dlPool, dlHead);
+            lf = lh = FALSE;
+            e = btm_Underflow(&pFid, rpage, &child, idx, &lf, &lh, &litem, dlPool, dlHead);
             if (e < eNOERROR) ERR(e);
 
             /* Underflow가 발생한 자식 page의 부모 page (파라미터로 주어진 root page) 에서 overflow가발생한경우,*/
-            if (h == TRUE)
+            if (lh)
 			{
                 /* edubtm_InsertInternal()을 호출하여 overflow로 인해 삽입되지 못한 internal index entry를 부모 page에 삽입함
                 edubtm_InsertInternal() 호출 결과로서 부모 page가 split 되므로, out parameter인 h를 TRUE로 설정하고 
                 split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함*/
 				memcpy(&tKey, &litem.klen, sizeof(KeyValue));
-				if (btm_BinarySearchInternal(rpage, kdesc, &tKey, &idx) == FALSE)
+				if (edubtm_BinarySearchInternal(rpage, kdesc, &tKey, &idx) == FALSE)
 					return (eNOTFOUND_BTM);
 
 				e = edubtm_InsertInternal(catObjForFile, rpage, &litem, idx, h, item);
