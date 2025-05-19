@@ -149,11 +149,13 @@ Four edubtm_Delete(
             MAKE_PAGEID(child, root->volNo, iEntry->spid);
         }
 
-        // 재귀적 호출
+        /*삭제할<object의 key, object ID> pair가 저장된 leaf page를 찾기 위해 다음으로 방문할 자식 page를 결정함
+        – 결정된자식page를root page로 하는 B+ subtree에서 <object의 key, object ID> pair를 삭제하기 위해
+        재귀적으로edubtm_Delete()를 호출함*/
         e = edubtm_Delete(catObjForFile, &child, kdesc, kval, oid, &lf, &lh, &litem, dlPool, dlHead);
         if (e < eNOERROR) ERR(e);
 
-        // Underflow 발생시 underflow 
+        // Underflow 발생시 
         if (lf){
             lf = lh = FALSE;
             e = btm_Underflow(&pFid, rpage, &child, idx, &lf, &lh, &litem, dlPool, dlHead);
