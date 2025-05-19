@@ -166,6 +166,8 @@ Four edubtm_Fetch(
     btm_InternalEntry   *iEntry;        /* an internal entry */
     Two                 lEntryOffset;   /* starting offset of a leaf entry */
     btm_LeafEntry       *lEntry;        /* a leaf entry */
+    Two                 tmp;
+    Two                 invalidCondition;
 
 
     /* Error check whether using not supported functionality by EduBtM */
@@ -179,98 +181,128 @@ Four edubtm_Fetch(
     e = BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
     if (e < eNOERROR) ERR(e);
 
-    if(apage->any.hdr.type & INTERNAL){
-        /*  
-        – 검색조건을만족하는첫번째 <object의 key, object ID> pair가 저장된 leaf page를 찾기위해
-          다음으로 방문할 자식page를결정함
-        */
-        if(edubtm_BinarySearchInternal(apage, kdesc, startKval, &idx)){
+    if (apage->any.hdr.type & INTERNAL) {
+        edubtm_BinarySearchInternal(apage, kdesc, startKval, &idx);
+
+        if (idx >= 0) {
             iEntryOffset = apage->bi.slot[-idx];
             iEntry = (btm_InternalEntry*)&apage->bi.data[iEntryOffset];
             MAKE_PAGEID(child, root->volNo, iEntry->spid);
-        }
-        else 
+        } else {
             MAKE_PAGEID(child, root->volNo, apage->bi.hdr.p0);
+        }
 
-        /*
-        – 결정된자식page를 root page로 하는 B+ subtree에서 검색 조건을 만족하는 첫 번째 <object의 key, object ID> 
-        pair가 저장된 leaf index entry를 검색하기 위해 재귀적으로 edubtm_Fetch()를 호출함
-        */
         e = edubtm_Fetch(&child, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
         if (e < eNOERROR) ERR(e);
-    }
-    else{
-        /*검색조건을만족하는첫번째<object의key, object ID> pair가 저장된 index entry를 검색함*/
-        found = edubtm_BinarySearchLeaf(apage, kdesc, startKval, &idx);
-        cursor->flag = CURSOR_ON;
-        slotNo = idx;
-        switch (startCompOp){
-            case SM_EQ:
-                if (!found) cursor->flag = CURSOR_EOS;
-                break;
-            case SM_LT:
-                if (!found) slotNo --; //found여도 어차피 하나 작게 옴.
-                break;
-            case SM_LE:
-                break;
-            case SM_GT:
-                slotNo ++;
-                break;
-            case SM_GE:
-                if (!found) slotNo ++;
-                break;
-            default:
-                break;
-        }
         
-        // Index값에 따라서 앞, 뒤페이지를 탐색함.
-        leafPid = root;
         e = BfM_FreeTrain(root, PAGE_BUF);
         if (e < eNOERROR) ERR(e);
+    }
+    else if (apage->any.hdr.type & LEAF) {
+        found = edubtm_BinarySearchLeaf(apage, kdesc, startKval, &idx);
+        leafPid = root;
+        cursor->flag = (One)CURSOR_ON;
+        switch (startCompOp){
+        case SM_EQ:
+            slotNo = idx;
+            if (!found){
+                cursor->flag = (One)CURSOR_EOS;
+            }
+            break;
+
+        case SM_LE:
+            slotNo = idx;
+            break;
+        case SM_GE:
+            slotNo = idx;
+            if (!found){ // lower than key
+                slotNo += 1;
+            }
+            break;
+        case SM_LT:
+            slotNo = idx; // lower than key only if not found
+            if (found){
+                slotNo -= 1;
+            }
+            break;
+        case SM_GT:
+            slotNo = idx + 1;
+
+        default:
+            break;
+        }
 
         if (slotNo < 0){
             if (apage->bl.hdr.prevPage == NIL){
-                cursor->flag = CURSOR_EOS;
+                cursor->flag = (One)CURSOR_EOS;
             } else{
-                MAKE_PAGEID(*leafPid, root->volNo, apage->bl.hdr.prevPage);
-                e = BfM_GetTrain(leafPid, (char**)&apage, PAGE_BUF);
-                if (e < eNOERROR) ERR(e);
-                slotNo = apage->bl.hdr.nSlots - 1;
+                MAKE_PAGEID(prevPid, root->volNo, apage->bl.hdr.prevPage);
+                leafPid = &prevPid;
             }
+
         } else if(slotNo >= apage->bl.hdr.nSlots){
+
             if (apage->bl.hdr.nextPage == NIL){
-                cursor->flag = CURSOR_EOS;
+                cursor->flag = (One)CURSOR_EOS;
             } else{
-                MAKE_PAGEID(*leafPid, root->volNo, apage->bl.hdr.nextPage);
-                e = BfM_GetTrain(leafPid, (char**)&apage, PAGE_BUF);
-                if (e < eNOERROR) ERR(e);
+                MAKE_PAGEID(nextPid, root->volNo, apage->bl.hdr.nextPage);
+                leafPid = &nextPid;
                 slotNo = 0;
             }
         }
 
-        // Stop Condition 적용
-        if (cursor->flag == CURSOR_ON){ 
+        e = BfM_FreeTrain(root, PAGE_BUF);
+        if (e < 0) ERR(e);
+
+        e = BfM_GetTrain(leafPid, (char**)&apage, PAGE_BUF);
+        if (e < 0) ERR(e);
+
+        if (cursor->flag != CURSOR_EOS){ // determine EOS or not
+            
+            if (slotNo < 0){
+                slotNo = apage->bl.hdr.nSlots - 1;
+            }
+
+            cursor->slotNo = slotNo;
+            cursor->leaf = *leafPid;
+
             lEntryOffset = apage->bl.slot[-slotNo];
             lEntry = (btm_LeafEntry*)&apage->bl.data[lEntryOffset];
 			alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+            memcpy(&cursor->key, &lEntry->klen, sizeof(KeyValue));
+            // memcpy(&cursor->oid, &lEntry->kval + alignedKlen, sizeof(ObjectID));
             cursor->oid = *(ObjectID*)&lEntry->kval[alignedKlen];
-            cursor->key.len = lEntry->klen;
-            memcpy(cursor->key.val, lEntry->kval, lEntry->klen);
-            cursor->leaf = *leafPid;
-            cursor->slotNo = slotNo;
+            
+            invalidCondition = FALSE;
             cmp = edubtm_KeyCompare(kdesc, &cursor->key, stopKval);
-            if ((stopCompOp == SM_LT && cmp != LESS) ||
-                (stopCompOp == SM_LE && cmp == GREATER) ||
-                (stopCompOp == SM_GT && cmp != GREATER) ||
-                (stopCompOp == SM_GE && cmp == LESS)){
+
+            switch(stopCompOp){
+                case SM_LT:
+                    invalidCondition = cmp != LESS;
+                    break;
+                case SM_LE:
+                    invalidCondition = (cmp == GREATER);
+                    break;
+                case SM_GT:
+                    invalidCondition = cmp != GREATER;
+                    break;
+                case SM_GE:
+                    invalidCondition = (cmp == LESS);
+                    break;
+                default:
+                    break;
+            }
+
+            if (invalidCondition){
                 cursor->flag = CURSOR_EOS;
             }
         }
-        
+
         e = BfM_FreeTrain(leafPid, PAGE_BUF);
-        if (e < eNOERROR) ERR(e);
+        if(e < 0) ERR(e);
     }
+
     return(eNOERROR);
+
     
 } /* edubtm_Fetch() */
-
