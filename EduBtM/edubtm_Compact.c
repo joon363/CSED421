@@ -84,10 +84,10 @@ void edubtm_CompactInternalPage(
     for ( i = 0; i <= lastSlot ; i++ ){
         if (i==slotNo) continue;
         /*
-        ------------------------------------------------
-        |     spid    |     klen     |      kval[]     |
-        ------------------------------------------------
-        ShortPageID       Two            entry->klen
+        --------------------------------------
+        |     spid    |   klen   |   kval[]  |
+        --------------------------------------
+        ShortPageID       Two      entry->klen
         */
         entry = (btm_InternalEntry*)(tpage.data[tpage.slot[-i]]);
         alignedKlen = ALIGNED_LENGTH(sizeof(Two)+entry->klen);
@@ -160,10 +160,10 @@ void edubtm_CompactLeafPage(
     for ( i = 0; i <= lastSlot ; i++ ){
         if (i==slotNo) continue;
         /*
-        ------------------------------------------------------------
-        |  nObjects |   klen   |      key    |   value(Object ID)  |
-        ------------------------------------------------------------
-            Two         Two      (aligned)klen       ObjectID
+        -----------------------------------------------------
+        |  nObjects |  klen  |   key   |  value(Object ID)  |
+        -----------------------------------------------------
+            Two        Two   (aligned)klen    ObjectID
         */
         entry = (btm_LeafEntry*)(tpage.data[tpage.slot[-i]]);
         alignedKlen = ALIGNED_LENGTH(entry->klen);

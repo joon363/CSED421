@@ -168,7 +168,7 @@ Four edubtm_Delete(
 					return (eNOTFOUND_BTM);
 
 				e = edubtm_InsertInternal(catObjForFile, rpage, &litem, idx, h, item);
-				if (e < 0) ERR(e);
+				if (e < eNOERROR) ERR(e);
 			}
 
             /*» btm_Underflow() 호출 결과로서 파라미터로 주어진 root page의 내용이 변경되므로, 
