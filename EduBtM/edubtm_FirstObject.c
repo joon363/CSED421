@@ -78,6 +78,7 @@ Four edubtm_FirstObject(
     BtreePage 		*apage;		/* a page pointer */
     Two                 lEntryOffset;   /* starting offset of a leaf entry */
     btm_LeafEntry 	*lEntry;	/* a leaf entry */
+    Two                 klen;    /* length of the key length */
     Two                 alignedKlen;    /* aligned length of the key length */
     
 
@@ -89,8 +90,48 @@ Four edubtm_FirstObject(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
-    
 
+    /* B+ tree 색인의 첫 번째 leaf page의 첫 번째 leaf index entry를 가리키는 cursor를 반환함*/
+
+    // find leftmost leaf
+    curPid = *root;
+    e = BfM_GetTrain(&curPid, (char**)&apage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    while(apage->any.hdr.flags & INTERNAL){
+        MAKE_PAGEID(child, curPid.volNo, apage->bi.hdr.p0);
+        e = BfM_FreeTrain(&curPid, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
+        e = BfM_GetTrain(&child, (char**)&apage, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
+        curPid = child;
+    }
+    /*
+    ------------------------------------------------------------
+    |  nObjects |   klen   |      key    |   value(Object ID)  |
+    ------------------------------------------------------------
+        Two         Two      (aligned)klen       ObjectID
+    */
+    lEntry = (btm_LeafEntry*)(apage->bl.data[apage->bl.slot[0]]);
+    klen = lEntry->klen;
+    alignedKlen = ALIGNED_LENGTH(klen);
+
+    // make cursor
+    cursor->oid = *(ObjectID*)&(lEntry->kval[alignedKlen]);
+    cursor->key.len = klen;
+    memcpy(cursor->key.val, lEntry->kval, klen);
+    cursor->leaf = apage->bl.hdr.pid;
+    /* note: cursor->overflow: 
+    중복key 사용시 동일key 값을갖는object들의ID (OID) 들이 
+    저장된page의 page ID로서, 유일 key만을 사용하는 EduBtM에서는 overflow 사용하지않음*/
+    cursor->slotNo = 0;
+    cmp = edubtm_KeyCompare(kdesc, stopKval, &cursor->key);
+    // 검색종료key 값이첫번째object의 key 값 보다 작거나
+    // key 값은 같으나검색종료연산이 SM_LT 인경우 CURSOR_EOS 반환
+    cursor->flag = (cmp==LESS || (cmp==EQUAL && stopCompOp == SM_LT)) ?
+        CURSOR_EOS:CURSOR_ON;
+    
+    e = BfM_FreeTrain(&curPid, PAGE_BUF);
+    if (e < 0) ERR(e);
     return(eNOERROR);
     
 } /* edubtm_FirstObject() */
