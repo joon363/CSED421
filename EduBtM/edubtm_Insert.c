@@ -284,7 +284,7 @@ Four edubtm_InsertLeaf(
         entry->nObjects = 1; // 유일key를 사용하는EduBtM에서는 각key 값 갖는 object는 한개씩만 존재함
         entry->klen = kval->len;
         memcpy(entry->kval, kval->val, alignedKlen);
-        //memcpy(&entry->kval[alignedKlen], oid, sizeof(ObjectID));
+        memcpy(&entry->kval[alignedKlen], oid, sizeof(ObjectID));
 
         // Page의 header을 갱신함
         page->hdr.free = page->hdr.free + entryLen;
