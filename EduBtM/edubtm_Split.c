@@ -93,20 +93,21 @@ Four edubtm_SplitInternal(
     btm_InternalEntry           *nEntry;                /* internal entry in the new page, npage*/
     Boolean                     isTmp;
 
+    /* 새로운page를 할당받음 */
     e = btm_AllocPage(catObjForFile, &fpage->hdr.pid, &newPid);
-    if (e < 0) ERR(e);
-
-    e = edubtm_InitInternal(&newPid, FALSE, FALSE);
-    if (e < 0) ERR(e);
-
+    if (e < eNOERROR) ERR(e);
     e = BfM_GetNewTrain(&newPid, (char**)&npage, PAGE_BUF);
-    if (e < 0) ERR(e);
+    if (e < eNOERROR) ERR(e);
+
+    /* 할당받은page를 Internal page로 초기화함*/
+    e = edubtm_InitInternal(&newPid, FALSE, FALSE);
+    if (e < eNOERROR) ERR(e);
 
     maxLoop = fpage->hdr.nSlots + 1;
     sum = 0;
     j = maxLoop - 1;
     flag = TRUE;
-    // get sorted array
+    // calculate numbers(j) of entries just over half of the fpage.
     for(i = maxLoop - 1; i >= 0 && sum <= BI_HALF; i--){
         if (i == high + 1){
             flag = FALSE;
@@ -217,20 +218,16 @@ Four edubtm_SplitLeaf(
     e = edubtm_InitLeaf(&newPid, FALSE, FALSE);
     if (e < eNOERROR) ERR(e);
     
-    /* 기존index entry들 및 삽입할 index entry를 key 순으로 정렬하여
-    overflow가 발생한 page 및 할당 받은 page에 나누어 저장함
-    – 먼저, overflow가 발생한 page에 데이터 영역을 50% 이상 채우는 수의index entry들을 저장함
-    – 나머지index entry들을 할당 받은 page에 저장함
-    – 각page의 header를 갱신함*/
-    maxLoop = fpage->hdr.nSlots + 1;
     itemEntryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen) + sizeof(ObjectID); 
+
+    // calculate numbers(j) of entries just over half of the fpage.
     sum = 0;
     j = 0;
-
-    // get sorted array
+    maxLoop = fpage->hdr.nSlots + 1;
     for(i = 0; i < maxLoop && sum <= BL_HALF; i++){
 
         if (i == high + 1){
+            // item slotNo (high) is inside fpage
             flag = TRUE;
             entryLen = itemEntryLen; 
         }else{
@@ -241,96 +238,121 @@ Four edubtm_SplitLeaf(
         }
         sum += (entryLen + sizeof(Two));
     }
+    // fpage has only j entries now.
+    // slots from slot[j] should be moved into npage.
     fpage->hdr.nSlots = j;
 
+    // remaining entries of fpage (j~nSlots) should be copied into npage.
     for (k = 0; i < maxLoop; i++, k++){
         nEntryOffset = npage->hdr.free;
         npage->slot[-k] = nEntryOffset;
         nEntry = &npage->data[nEntryOffset];
         
         if (i == high + 1){
+            // item slotNo (high) is inside npage
             nEntry->klen = item->klen;
             nEntry->nObjects = item->nObjects;
             
             entryLen = itemEntryLen;
             memcpy(nEntry->kval, item->kval, item->klen);
             memcpy(&nEntry->kval[ALIGNED_LENGTH(item->klen)], &item->oid, OBJECTID_SIZE);
-            // *(ObjectID*)&nEntry->kval[entryLen] = item->oid;
         }
         else{
+            // copy fpage entry into npage from slot[j]
             fEntryOffset = fpage->slot[-j];
             fEntry = &fpage->data[fEntryOffset];
             entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(fEntry->klen) + sizeof(ObjectID);
-            
             memcpy(nEntry, fEntry, entryLen);
-            
+            /* look at page 16 of manual.
+             * we are removing fEntry from fpage.
+             * if fEntry is the last object of data area just before conti-free area,
+             * starting address of continuous free area should be reduced. */
             if (fEntryOffset + entryLen == fpage->hdr.free)
                 fpage->hdr.free -= entryLen;
             else
+            // else, just increase unused area.
                 fpage->hdr.unused += entryLen;
-
             j++;
         }
-
+        // update continuous free area address.
         npage->hdr.free += entryLen;
     }
     npage->hdr.nSlots = k;
 
+    // this flag means that item slotNo (high) is inside fpage
+    // therefore, we need to insert input item into fpage at high.
     if(flag){
+        // shift other pages
         for(i = fpage->hdr.nSlots - 1; i > high; i--){
             fpage->slot[-(i+1)] = fpage->slot[-i];
         }
-
+        // compact page if you need to.
         if (BI_CFREE(fpage) < itemEntryLen){
             edubtm_CompactLeafPage(fpage, NIL);
         }
-
+        
+        // we will add the item at the end of free area.
         fpage->slot[-(high + 1)] = fpage->hdr.free;
 
+        // copy item into the end of free area.
         fEntry = &fpage->data[fpage->hdr.free];
         fEntry->nObjects = item->nObjects;
         fEntry->klen = item->klen;
-
         memcpy(fEntry->kval, item->kval, item->klen);        
         memcpy(&fEntry->kval[ALIGNED_LENGTH(item->klen)], &item->oid, OBJECTID_SIZE);
 
+        // now update the continuous free area address.
         fpage->hdr.free += sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen) + sizeof(ObjectID);
         fpage->hdr.nSlots ++;
     }
 
-    nEntry = &npage->data[npage->slot[0]];
-    ritem->spid = npage->hdr.pid.pageNo;
-    ritem->klen = nEntry->klen;
-    memcpy(ritem->kval, nEntry->kval, nEntry->klen);
 
-    if (fpage->hdr.type & ROOT)
-        fpage->hdr.type = LEAF;
-
-    // initialize page list
+    /*할당받은page를leaf page들간의 doubly linked list에 추가함
+    – 할당받은page가overflow가 발생한 page의 다음 page가 되도록 추가함 */
+    
+    
+    // 0) f <-> f'
+    // 1) n -> f'
     npage->hdr.nextPage = fpage->hdr.nextPage;
+
+    // 2) f <- n
     npage->hdr.prevPage = fpage->hdr.pid.pageNo;
+
+    // 3) f -> n
     fpage->hdr.nextPage = npage->hdr.pid.pageNo;
 
+    // 4) n <- f' (if f' exists) 
     if (npage->hdr.nextPage != NIL){
+        // acquire n.next (it was f')
         MAKE_PAGEID(nextPid, npage->hdr.pid.volNo, npage->hdr.nextPage);
-
         e = BfM_GetTrain(&nextPid, &mpage, PAGE_BUF);
-        if(e < 0) ERR(e);
+        if(e < eNOERROR) ERR(e);
         
         mpage->hdr.prevPage = npage->hdr.pid.pageNo;
 
         e = BfM_SetDirty(&nextPid, PAGE_BUF);
-        if(e < 0) ERR(e);
-
+        if(e < eNOERROR) ERR(e);
         e = BfM_FreeTrain(&nextPid, PAGE_BUF);
-        if(e < 0) ERR(e);
+        if(e < eNOERROR) ERR(e);
     }
+    // f <-> n <-> f'
+
+    /*할당받은page를가리키는internal index entry를 생성함
+    – Discriminator key 값 := 할당 받은 page의 첫 번째 index entry (slot 번호= 0) 의key 값
+    – 자식page의 번호:= 할당받은page (npage)의 번호*/
+    nEntry = &npage->data[npage->slot[0]];
+    ritem->klen = nEntry->klen;
+    memcpy(ritem->kval, nEntry->kval, nEntry->klen);
+    ritem->spid = npage->hdr.pid.pageNo;
+
+    // Split된 page가 ROOT일 경우, type을 LEAF로 변경함
+    if (fpage->hdr.type & ROOT)
+        fpage->hdr.type = LEAF;
 
     e = BfM_SetDirty(&newPid, PAGE_BUF);
-    if(e < 0) ERR(e);
-
+    if(e < eNOERROR) ERR(e);
     e = BfM_FreeTrain(&newPid, PAGE_BUF);
-    if(e < 0) ERR(e);
+    if(e < eNOERROR) ERR(e);
 
     return(eNOERROR);
     
