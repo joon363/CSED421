@@ -4,19 +4,7 @@ Name: JunHyeok Park
 
 Student id: 20220312
 
-# Problem Analysis
-
-FILL WITH YOUR ANALYSIS
-
 # Design For Problem Solving
-
-## High Level
-
-Implemented functions:
-- EduBtM_CreateIndex
-    - edubtm_InitLeaf
-- EduBtM_DropIndex
-    - edubtm_FreePages
 
 ## Low Level
 
