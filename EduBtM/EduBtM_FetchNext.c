@@ -148,6 +148,7 @@ Four edubtm_FetchNext(
     ObjectID 		*oidArray;	/* array of ObjectIDs */
     BtreeLeaf 		*apage;		/* pointer to a buffer holding a leaf page */
     BtreeOverflow 	*opage;		/* pointer to a buffer holding an overflow page */
+    Two             lEntryOffset;   /* starting offset of a leaf entry */
     btm_LeafEntry 	*entry;		/* pointer to a leaf entry */    
     
     
@@ -159,6 +160,61 @@ Four edubtm_FetchNext(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    e = BfM_GetTrain(&current->leaf, (char**)&apage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    if (compOp == SM_GT || compOp == SM_GE || compOp == SM_BOF){
+        next->slotNo = current->slotNo - 1;
+    } else {
+        next->slotNo = current->slotNo + 1;
+    }
+
+    leaf = current->leaf;
+    e = BfM_FreeTrain(&current->leaf, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    next->flag = CURSOR_ON;
+
+    if (next->slotNo < 0){
+        if (apage->hdr.prevPage == NIL){
+            next->flag = CURSOR_EOS;
+        } else{
+            MAKE_PAGEID(overflow, leaf.volNo, apage->hdr.prevPage);
+            e = BfM_GetTrain(&overflow, (char**)&apage, PAGE_BUF);
+            if (e < eNOERROR) ERR(e);
+            next->slotNo = apage->hdr.nSlots - 1;
+        }
+    } else if(next->slotNo >= apage->hdr.nSlots){
+        if (apage->hdr.nextPage == NIL){
+            next->flag = CURSOR_EOS;
+        } else{
+            MAKE_PAGEID(overflow, leaf.volNo, apage->hdr.nextPage);
+            e = BfM_GetTrain(&overflow, (char**)&apage, PAGE_BUF);
+            if (e < eNOERROR) ERR(e);
+            next->slotNo = 0;
+        }
+    }
+
+
+    // Stop Condition 적용
+    if (next->flag == CURSOR_ON){ 
+        lEntryOffset = apage->slot[-(next->slotNo)];
+        entry = (btm_LeafEntry*)&apage->data[lEntryOffset];
+        alignedKlen = ALIGNED_LENGTH(entry->klen);
+        next->oid = *(ObjectID*)&entry->kval[alignedKlen];
+        next->key.len = entry->klen;
+        memcpy(next->key.val, entry->kval, entry->klen);
+        next->leaf = overflow;
+        next->slotNo = next->slotNo;
+        cmp = edubtm_KeyCompare(kdesc, &next->key, kval);
+        if ((compOp == SM_LT && cmp != LESS) ||
+            (compOp == SM_LE && cmp == GREATER) ||
+            (compOp == SM_GT && cmp != GREATER) ||
+            (compOp == SM_GE && cmp == LESS)){
+            next->flag = CURSOR_EOS;
+        }
+    }
+
+    e = BfM_FreeTrain(&overflow, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
     
     return(eNOERROR);
     
