@@ -107,6 +107,8 @@ Four EduBtM_FetchNext(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    e = edubtm_FetchNext(kdesc, kval, compOp, current, next);
+    if (e < 0) ERR(e);
     
     return(eNOERROR);
     
@@ -160,23 +162,24 @@ Four edubtm_FetchNext(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
-    e = BfM_GetTrain(&current->leaf, (char**)&apage, PAGE_BUF);
+    leaf = current->leaf;
+    next->flag = CURSOR_ON;
+    overflow = current->leaf;
+    e = BfM_GetTrain(&leaf, (char**)&apage, PAGE_BUF);
     if (e < eNOERROR) ERR(e);
+
     if (compOp == SM_GT || compOp == SM_GE || compOp == SM_BOF){
         next->slotNo = current->slotNo - 1;
     } else {
         next->slotNo = current->slotNo + 1;
     }
 
-    leaf = current->leaf;
-    e = BfM_FreeTrain(&current->leaf, PAGE_BUF);
-    if (e < eNOERROR) ERR(e);
-    next->flag = CURSOR_ON;
-
     if (next->slotNo < 0){
         if (apage->hdr.prevPage == NIL){
             next->flag = CURSOR_EOS;
         } else{
+            e = BfM_FreeTrain(&leaf, PAGE_BUF);
+            if (e < eNOERROR) ERR(e);
             MAKE_PAGEID(overflow, leaf.volNo, apage->hdr.prevPage);
             e = BfM_GetTrain(&overflow, (char**)&apage, PAGE_BUF);
             if (e < eNOERROR) ERR(e);
@@ -186,6 +189,8 @@ Four edubtm_FetchNext(
         if (apage->hdr.nextPage == NIL){
             next->flag = CURSOR_EOS;
         } else{
+            e = BfM_FreeTrain(&leaf, PAGE_BUF);
+            if (e < eNOERROR) ERR(e);
             MAKE_PAGEID(overflow, leaf.volNo, apage->hdr.nextPage);
             e = BfM_GetTrain(&overflow, (char**)&apage, PAGE_BUF);
             if (e < eNOERROR) ERR(e);
@@ -195,27 +200,26 @@ Four edubtm_FetchNext(
 
 
     // Stop Condition 적용
-    if (next->flag == CURSOR_ON){ 
+    if (next->flag == CURSOR_ON){
         lEntryOffset = apage->slot[-(next->slotNo)];
         entry = (btm_LeafEntry*)&apage->data[lEntryOffset];
         alignedKlen = ALIGNED_LENGTH(entry->klen);
         next->oid = *(ObjectID*)&entry->kval[alignedKlen];
-        next->key.len = entry->klen;
-        memcpy(next->key.val, entry->kval, entry->klen);
+        memcpy(&next->key, &entry->klen, sizeof(KeyValue));
+
         next->leaf = overflow;
-        next->slotNo = next->slotNo;
         cmp = edubtm_KeyCompare(kdesc, &next->key, kval);
         if ((compOp == SM_LT && cmp != LESS) ||
             (compOp == SM_LE && cmp == GREATER) ||
             (compOp == SM_GT && cmp != GREATER) ||
-            (compOp == SM_GE && cmp == LESS)){
+            (compOp == SM_GE && cmp == LESS) ||
+            (compOp == SM_EQ && cmp != EQUAL)){
             next->flag = CURSOR_EOS;
         }
     }
 
     e = BfM_FreeTrain(&overflow, PAGE_BUF);
     if (e < eNOERROR) ERR(e);
-    
     return(eNOERROR);
     
 } /* edubtm_FetchNext() */
