@@ -71,7 +71,8 @@ Four edubtm_InitInternal(
 
     page->hdr.pid = *internal;
     page->hdr.flags = BTREE_PAGE_TYPE;
-    page->hdr.type = root?ROOT:INTERNAL;
+	page->hdr.type = INTERNAL;
+	if (root) page->hdr.type |= ROOT;
     page->hdr.p0 = NIL;
     page->hdr.nSlots = 0;
     page->hdr.free = 0;
@@ -118,7 +119,8 @@ Four edubtm_InitLeaf(
 
     page->hdr.pid = *leaf;
     page->hdr.flags = BTREE_PAGE_TYPE;
-    page->hdr.type = root?ROOT:LEAF;
+	page->hdr.type = LEAF;
+	if (root) page->hdr.type |= ROOT;
     page->hdr.nSlots = 0;
     page->hdr.free = 0;
     page->hdr.prevPage = NIL;

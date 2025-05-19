@@ -70,7 +70,20 @@ Four EduBtM_CreateIndex(
     sm_CatOverlayForBtree *catEntry; /* pointer to Btree file catalog information */
     PhysicalFileID pFid;	/* physical file ID */
 
+    e = BfM_GetTrain(catObjForFile, (char**)&catPage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    GET_PTR_TO_CATENTRY_FOR_BTREE(catObjForFile, catPage, catEntry);
+    MAKE_PHYSICALFILEID(pFid, catEntry->fid.volNo, catEntry->firstPage);   
 
+    //btm_AllocPage()를 호출하여 색인 file의 첫 번째 page를할당받음
+    e = btm_AllocPage(catObjForFile, (PageID *)&pFid, rootPid);
+    if (e < eNOERROR) ERR(e);
+    //할당받은page를 root page로 초기화함
+    e = edubtm_InitLeaf(rootPid, TRUE, FALSE);
+    if (e < eNOERROR) ERR(e);
+    
+    e = BfM_FreeTrain(catObjForFile, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
 
     return(eNOERROR);
     
