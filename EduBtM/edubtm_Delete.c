@@ -127,11 +127,67 @@ Four edubtm_Delete(
 
         
     *h = *f = FALSE;
-    
-    
-    /* Delete following 2 lines before implement this function */
-    printf("and delete operation has not been implemented yet.\n");
+    lf = lh = FALSE;
 
+    // get Physical FIle ID to call underflow function.
+    e = BfM_GetTrain(catObjForFile, &catPage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    GET_PTR_TO_CATENTRY_FOR_BTREE(catObjForFile, catPage, catEntry);
+    MAKE_PHYSICALFILEID(pFid, catEntry->fid.volNo, catEntry->firstPage);
+    
+    // get root page
+    e = BfM_GetTrain(root, (char**)&rpage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+
+    // 파라미터로 주어진 root page가 internal page인 경우
+    if (rpage->any.hdr.type & INTERNAL){
+        if(edubtm_BinarySearchInternal(rpage, kdesc, kval, &idx)){
+            iEntry = (btm_InternalEntry*)&rpage->bi.data[rpage->bi.slot[-idx]];
+            MAKE_PAGEID(child, root->volNo, iEntry->spid);
+        }
+        else 
+            MAKE_PAGEID(child, root->volNo, rpage->bi.hdr.p0);
+
+        // 재귀적 호출
+        e = edubtm_Delete(catObjForFile, &child, kdesc, kval, oid, &lf, &lh, &litem, dlPool, dlHead);
+        if (e < eNOERROR) ERR(e);
+
+        // Underflow 발생시 underflow 
+        if (lf){
+            e = btm_Underflow(&pFid, rpage, &child, idx, f, h, &litem, dlPool, dlHead);
+            if (e < eNOERROR) ERR(e);
+
+            /* Underflow가 발생한 자식 page의 부모 page (파라미터로 주어진 root page) 에서 overflow가발생한경우,*/
+            if (h == TRUE)
+			{
+                /* edubtm_InsertInternal()을 호출하여 overflow로 인해 삽입되지 못한 internal index entry를 부모 page에 삽입함
+                edubtm_InsertInternal() 호출 결과로서 부모 page가 split 되므로, out parameter인 h를 TRUE로 설정하고 
+                split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함*/
+				memcpy(&tKey, &litem.klen, sizeof(KeyValue));
+				if (btm_BinarySearchInternal(rpage, kdesc, &tKey, &idx) == FALSE)
+					return (eNOTFOUND_BTM);
+
+				e = edubtm_InsertInternal(catObjForFile, rpage, &litem, idx, h, item);
+				if (e < 0) ERR(e);
+			}
+
+            /*» btm_Underflow() 호출 결과로서 파라미터로 주어진 root page의 내용이 변경되므로, 
+            btm_Underflow() 호출 후 root page의 DIRTY bit를 1로 set 해야 함*/
+            e = BfM_SetDirty(root, PAGE_BUF);
+            if (e < eNOERROR) ERR(e);
+        }
+    } 
+    // 파라미터로 주어진 root page가 root page인 경우
+    // 호출하면 된다. dirty 처리와 비트 세팅 전부 함.
+    else {
+        e = edubtm_DeleteLeaf(&pFid, root, rpage, kdesc, kval, oid, f, h, &litem, dlPool, dlHead);
+        if (e < eNOERROR) ERR(e);
+    }
+
+    e = BfM_FreeTrain(catObjForFile, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    e = BfM_FreeTrain(root, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
 
     return(eNOERROR);
     
@@ -200,10 +256,30 @@ Four edubtm_DeleteLeaf(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    //삭제할<object의 key, object ID> pair가 저장된 index entry의 offset이 저장된 slot을 삭제함
+    //note: apage를 줬으므로 gettrain 안해도 됨.
+    found = edubtm_BinarySearchLeaf(apage, kdesc, kval, &idx);
+    lEntryOffset = apage->slot[-idx];
+    lEntry = (btm_LeafEntry*)&apage->data[lEntryOffset];
+    alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+    entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + sizeof(ObjectID);
 
-    /* Delete following 2 lines before implement this function */
-    printf("and delete operation has not been implemented yet.\n");
+    // Slot array 중간에 삭제된 빈 slot이 없도록 slot array를 compact 함
+    for(i = idx; i < apage->hdr.nSlots; i++){
+        apage->slot[-i] = apage->slot[-(i+1)];
+    }
+    // Leaf page의 header를 갱신함
+    apage->hdr.nSlots -= 1;
+    apage->hdr.unused += entryLen;
 
+    /*Leaf page에서 underflow가 발생한 경우
+    (page의 data 영역중자유영역의크기> (page의data 영역의전체크기/ 2)), 
+    out parameter인 f를 TRUE로 설정함*/
+    if (BL_FREE(apage) >= BL_HALF) *f = TRUE;
+
+    //note: gettrain 안했으므로 free 안해도 됨.
+    e = BfM_SetDirty(pid, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
 	      
     return(eNOERROR);
     
