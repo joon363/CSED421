@@ -97,6 +97,17 @@ Four EduBtM_InsertObject(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
     
+    /*edubtm_Insert()를 호출하여 새로운 object에 대한 <object의 key, object ID> pair를 
+    B+ tree 색인에 삽입*/
+    lf = lh = FALSE;
+    e = edubtm_Insert(catObjForFile, root, kdesc, kval, oid, &lf, &lh, &item, dlPool, dlHead);
+    if (e < eNOERROR) ERR(e);
+    /*  Root page에서 split이 발생하여 새로운 root page 생성이필요한경우, 
+    edubtm_root_insert()를 호출하여 이를처리함*/
+    if (lh == TRUE){
+        e = edubtm_root_insert(catObjForFile, root, &item);
+        if (e < eNOERROR) ERR(e);
+    }
     
     return(eNOERROR);
     
