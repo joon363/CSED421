@@ -103,6 +103,8 @@ Four edubtm_FreePages(
     }
     /* Note: EduBtM에서는 Overflow 고려 안함.*/
     
+	apage->any.hdr.type = FREEPAGE;
+    
     // Allocate a new dealloc list element from the dlPool given as a parameter
     e = Util_getElementFromPool(dlPool, &dlElem);
     if (e < eNOERROR) ERR(e);
@@ -112,6 +114,11 @@ Four edubtm_FreePages(
     // Insert the element into the dealloc list as the first element.
     dlElem->next = dlHead->next;
     dlHead->next = dlElem; 
+    
+    e = BfM_SetDirty(curPid, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    e = BfM_FreeTrain(curPid, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
     
     return(eNOERROR);
     
