@@ -256,10 +256,10 @@ Four edubtm_InsertLeaf(
             ALIGNED_LENGTH(kdesc->kpart[i].length) : ALIGNED_LENGTH(kval->len);
     }
     /*
-    ------------------------------------------------------------
-    |  nObjects |   klen   |      key    |   value(Object ID)  |
-    ------------------------------------------------------------
-        Two         Two      (aligned)klen       ObjectID
+    -----------------------------------------------------
+    |  nObjects |  klen  |   key   |  value(Object ID)  |
+    -----------------------------------------------------
+        Two        Two   (aligned)klen    ObjectID
     */
     entryLen = sizeof(Two)+ sizeof(Two)+ alignedKlen+ sizeof(ObjectID);
     // Align 된 key 영역을 고려한 새로운 index entry의 크기 + slot의 크기
@@ -294,7 +294,7 @@ Four edubtm_InsertLeaf(
         – edubtm_SplitLeaf()를 호출하여 page를 split 함
         – Split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함 */
     else{
-        /* Leaf
+        /* LeafItem
         ----------------------------------------------------
          oid      | nObjects |  klen  | char kval[MAXKEYLEN]
          ObjectID |    Two   |  Two   |
@@ -375,7 +375,7 @@ Four edubtm_InsertInternal(
     if (BL_FREE(page) >= neededSpace){
         // – 필요시page를compact 함  
         if (BL_CFREE(page) < neededSpace)
-            edubtm_CompactLeafPage(page, NIL);
+            edubtm_CompactInternalPage(page, NIL);
         
         // » 결정된slot 번호를갖는slot을 사용하기 위해slot array를 재배열함
         for(i = page->hdr.nSlots - 1; i > high; i--){
