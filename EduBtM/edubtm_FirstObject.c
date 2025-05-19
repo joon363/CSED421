@@ -125,7 +125,7 @@ Four edubtm_FirstObject(
         CURSOR_EOS:CURSOR_ON;
     
     e = BfM_FreeTrain(&curPid, PAGE_BUF);
-    if (e < 0) ERR(e);
+    if (e < eNOERROR) ERR(e);
     return(eNOERROR);
     
 } /* edubtm_FirstObject() */
