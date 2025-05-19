@@ -112,9 +112,8 @@ Four edubtm_root_insert(
     ------------------------------------------------
       ShortPageID       Two          item->klen
     */
+    rootPage->bi.slot[-(rootPage->bi.hdr.nSlots)] = rootPage->bi.hdr.free;
     rootPage->bi.hdr.free += sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two)+item->klen);
-    rootPage->bi.slot[0] = rootPage->bi.hdr.free;
-
     rootPage->bi.hdr.p0 = newPid.pageNo;
     rootPage->bi.hdr.nSlots = 1;
 
