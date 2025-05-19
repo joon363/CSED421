@@ -128,13 +128,16 @@ Four edubtm_Insert(
         – 새로운<object의 key, object ID> pair를 삽입할 leaf page를 찾기위해
           다음으로방문할자식page를결정함
         */
-        if(edubtm_BinarySearchInternal(apage, kdesc, kval, &idx)){
+        edubtm_BinarySearchInternal(apage, kdesc, kval, &idx);
+
+        if(idx == -1){
+            MAKE_PAGEID(newPid, root->volNo, apage->bi.hdr.p0);
+        }
+        else {
             iEntryOffset = apage->bi.slot[-idx];
             iEntry = (btm_InternalEntry*)&apage->bi.data[iEntryOffset];
             MAKE_PAGEID(newPid, root->volNo, iEntry->spid);
         }
-        else 
-            MAKE_PAGEID(newPid, root->volNo, apage->bi.hdr.p0);
 
         /*
         – 결정된자식page를 root page로 하는 B+ subtree에 새로운 <object의 key, object ID> pair를 삽입하기 위해 
