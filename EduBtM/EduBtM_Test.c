@@ -958,6 +958,7 @@ void stringToCompOp(
 	)
 {
 	rawString[strcspn(rawString, "\n")] = 0;
+	rawString[strcspn(rawString, "\r")] = 0;
 	if(strcmp(rawString, "EQ") == 0) 
 		*compOp = SM_EQ;
 	else if (strcmp(rawString, "LT") == 0) 
