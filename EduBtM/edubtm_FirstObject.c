@@ -91,8 +91,6 @@ Four edubtm_FirstObject(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
-    /* B+ tree 색인의 첫 번째 leaf page의 첫 번째 leaf index entry를 가리키는 cursor를 반환함*/
-
     // find leftmost leaf
     curPid = *root;
     e = BfM_GetTrain(&curPid, (char**)&apage, PAGE_BUF);
@@ -105,12 +103,8 @@ Four edubtm_FirstObject(
         if (e < eNOERROR) ERR(e);
         curPid = child;
     }
-    /*
-    ------------------------------------------------------------
-    |  nObjects |   klen   |      key    |   value(Object ID)  |
-    ------------------------------------------------------------
-        Two         Two      (aligned)klen       ObjectID
-    */
+    /* B+ tree 색인의 첫 번째 leaf page의 첫 번째 leaf index entry를 
+    가리키는 cursor를 반환함*/    
     lEntry = (btm_LeafEntry*)(apage->bl.data[apage->bl.slot[0]]);
     klen = lEntry->klen;
     alignedKlen = ALIGNED_LENGTH(klen);

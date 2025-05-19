@@ -82,6 +82,7 @@ Four edubtm_LastObject(
     Two 		iEntryOffset;	/* starting offset of an internal entry */
     btm_LeafEntry 	*lEntry;	/* a leaf entry */
     btm_InternalEntry 	*iEntry;	/* an internal entry */
+    Two                 klen;    /* length of the key length */
     Four 		alignedKlen;	/* aligned length of the key length */
         
 
@@ -94,7 +95,50 @@ Four edubtm_LastObject(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
     
+    /*B+ tree 색인에서 마지막 object (가장 큰 key값을 갖는leaf index entry) 를 검색함
+        • • 
+        */
+    // find rightmost leaf
+    curPid = *root;
+    e = BfM_GetTrain(&curPid, (char**)&apage, PAGE_BUF);
+    if (e < eNOERROR) ERR(e);
+    while(apage->any.hdr.flags & INTERNAL){
+        i = apage->bi.hdr.nSlots - 1;
+        iEntryOffset = apage->bi.slot[-i];
+        iEntry = (btm_InternalEntry*)&apage->bi.data[iEntryOffset];
+        MAKE_PAGEID(child, curPid.volNo, iEntry->spid);
 
+        e = BfM_FreeTrain(&curPid, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
+        e = BfM_GetTrain(&child, (char**)&apage, PAGE_BUF);
+        if (e < eNOERROR) ERR(e);
+        curPid = child;
+    }
+    
+    /* B+ tree 색인의 마지막 leaf page의 마지막 index entry (slot 번호 = nSlots- 1) 를 
+    가리키는 cursor를 반환함 */
+    i = apage->bi.hdr.nSlots - 1;
+    lEntryOffset = apage->bi.slot[-i];
+    lEntry = (btm_LeafEntry*)&apage->bi.data[iEntryOffset];
+    klen = lEntry->klen;
+    alignedKlen = ALIGNED_LENGTH(klen);
+
+    cursor->oid = *(ObjectID*)&(lEntry->kval[alignedKlen]);
+    cursor->key.len = klen;
+    memcpy(cursor->key.val, lEntry->kval, klen);
+    cursor->leaf = apage->bl.hdr.pid;
+    /* note: cursor->overflow: 
+    중복key 사용시 동일key 값을갖는object들의ID (OID) 들이 
+    저장된page의 page ID로서, 유일 key만을 사용하는 EduBtM에서는 overflow 사용하지않음*/
+    cursor->slotNo = 0;
+    cmp = edubtm_KeyCompare(kdesc, stopKval, &cursor->key);
+    // 검색종료key 값이마지막object의 key 값 보다 크거나, 
+    // key 값은 같으나 검색종료연산이SM_GT인경우 CURSOR_EOS 반환
+    cursor->flag = (cmp==GREATER || (cmp==EQUAL && stopCompOp == SM_GT)) ?
+        CURSOR_EOS:CURSOR_ON;
+    
+    e = BfM_FreeTrain(&curPid, PAGE_BUF);
+    if (e < 0) ERR(e);
     return(eNOERROR);
     
 } /* edubtm_LastObject() */
